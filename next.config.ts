@@ -3,6 +3,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
+  async redirects() {
+    return [
+      { source: "/manage", destination: "/knowledge/textbook", permanent: false },
+      { source: "/knowledge/edb", destination: "/knowledge/textbook", permanent: false },
+    ];
+  },
   experimental: {
     proxyClientMaxBodySize: "50mb",
   },

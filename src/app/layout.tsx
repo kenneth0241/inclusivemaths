@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Teacher upload · Dify Knowledge",
-  description: "Upload teaching files directly into a Dify knowledge base.",
+  title: "Inclusive Maths · Teacher studio",
+  description:
+    "Primary Grade 1 Inclusive Maths studio: textbook chat, learner profiles, lesson plans, worksheets and games.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -23,7 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="font-sans min-h-full flex flex-col">{children}</body>
     </html>
   );
 }

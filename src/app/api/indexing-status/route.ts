@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
-import { difyFetch, getDifyConfig, readDifyError } from "@/lib/dify";
+import {
+  difyFetch,
+  readDifyError,
+  resolveDatasetFromRequest,
+} from "@/lib/dify";
 
 export async function GET(request: Request) {
   try {
-    const { lockedDatasetId } = getDifyConfig();
     const { searchParams } = new URL(request.url);
-    const datasetId = lockedDatasetId || searchParams.get("datasetId") || "";
+    const datasetId = resolveDatasetFromRequest({
+      corpus: searchParams.get("corpus"),
+      datasetId: searchParams.get("datasetId"),
+    });
     const batch = searchParams.get("batch") || "";
 
     if (!datasetId || !batch) {

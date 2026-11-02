@@ -1,13 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-
-type Dataset = {
-  id: string;
-  name: string;
-  description?: string | null;
-  document_count?: number;
-};
+import {
+  type CorpusId,
+  CORPUS_META,
+  isMarkdownUploadFile,
+} from "@/lib/corpus";
+import EnvConfigBanner from "./EnvConfigBanner";
 
 type UploadItem = {
   id: string;
@@ -18,8 +17,7 @@ type UploadItem = {
   datasetId?: string;
 };
 
-const ACCEPTED =
-  ".txt,.md,.markdown,.pdf,.html,.htm,.xlsx,.xls,.docx,.csv,.xml,.epub,.pptx,.ppt";
+const ACCEPTED = ".md,.markdown";
 
 function statusLabel(status: UploadItem["status"]) {
   switch (status) {
@@ -36,11 +34,17 @@ function statusLabel(status: UploadItem["status"]) {
   }
 }
 
-export default function UploadForm() {
-  const [datasets, setDatasets] = useState<Dataset[]>([]);
-  const [datasetId, setDatasetId] = useState("");
-  const [locked, setLocked] = useState(false);
-  const [configured, setConfigured] = useState<boolean | null>(null);
+type UploadFormProps = {
+  corpus: CorpusId;
+};
+
+export default function UploadForm({ corpus }: UploadFormProps) {
+  const meta = CORPUS_META[corpus];
+  const [corpusConfigured, setCorpusConfigured] = useState<boolean | null>(null);
+  const [knowledgeConfigured, setKnowledgeConfigured] = useState<boolean | null>(
+    null,
+  );
+  const [deployHint, setDeployHint] = useState<"local" | "vercel">("local");
   const [loadError, setLoadError] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [items, setItems] = useState<UploadItem[]>([]);
@@ -48,43 +52,30 @@ export default function UploadForm() {
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const loadDatasets = useCallback(async () => {
+  const loadConfig = useCallback(async () => {
     setLoadError("");
-    const [configRes, datasetsRes] = await Promise.all([
-      fetch("/api/config"),
-      fetch("/api/datasets"),
-    ]);
-
-    const config = (await configRes.json()) as {
-      configured?: boolean;
-      lockedDatasetId?: string | null;
+    const response = await fetch("/api/config", { cache: "no-store" });
+    const config = (await response.json()) as {
+      knowledgeConfigured?: boolean;
+      deployHint?: "local" | "vercel";
+      corpora?: { corpus: CorpusId; configured: boolean }[];
     };
-    setConfigured(Boolean(config.configured));
-
-    if (!datasetsRes.ok) {
-      const body = (await datasetsRes.json()) as { error?: string };
-      setLoadError(body.error || "Could not load Dify knowledge bases.");
-      return;
-    }
-
-    const body = (await datasetsRes.json()) as { datasets?: Dataset[] };
-    const list = body.datasets ?? [];
-    setDatasets(list);
-
-    if (config.lockedDatasetId) {
-      setLocked(true);
-      setDatasetId(config.lockedDatasetId);
-    } else if (list.length === 1) {
-      setDatasetId(list[0].id);
-    }
-  }, []);
+    setKnowledgeConfigured(Boolean(config.knowledgeConfigured));
+    setDeployHint(config.deployHint === "vercel" ? "vercel" : "local");
+    const entry = config.corpora?.find((item) => item.corpus === corpus);
+    setCorpusConfigured(Boolean(entry?.configured));
+  }, [corpus]);
 
   useEffect(() => {
-    void loadDatasets();
-  }, [loadDatasets]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch corpus config on mount
+    void loadConfig();
+  }, [loadConfig]);
 
   function addFiles(incoming: FileList | File[]) {
-    const next = Array.from(incoming);
+    const next = Array.from(incoming).filter(isMarkdownUploadFile);
+    if (next.length === 0 && incoming.length > 0) {
+      setLoadError("Only Markdown files (.md or .markdown) can be uploaded.");
+    }
     setFiles((current) => {
       const names = new Set(current.map((file) => `${file.name}:${file.size}`));
       return [
@@ -94,11 +85,18 @@ export default function UploadForm() {
     });
   }
 
-  async function pollIndexing(itemId: string, dataset: string, batch: string) {
+  async function pollIndexing(
+    itemId: string,
+    batch: string,
+    datasetId: string,
+  ) {
     for (let attempt = 0; attempt < 60; attempt += 1) {
-      const response = await fetch(
-        `/api/indexing-status?datasetId=${encodeURIComponent(dataset)}&batch=${encodeURIComponent(batch)}`,
-      );
+      const query = new URLSearchParams({
+        corpus,
+        batch,
+        datasetId,
+      });
+      const response = await fetch(`/api/indexing-status?${query.toString()}`);
       if (!response.ok) {
         const body = (await response.json()) as { error?: string };
         throw new Error(body.error || "Could not check indexing status.");
@@ -114,7 +112,11 @@ export default function UploadForm() {
         setItems((current) =>
           current.map((item) =>
             item.id === itemId
-              ? { ...item, status: "completed", message: "Indexed in Dify Knowledge." }
+              ? {
+                  ...item,
+                  status: "completed",
+                  message: "Indexed in Dify Knowledge.",
+                }
               : item,
           ),
         );
@@ -134,7 +136,8 @@ export default function UploadForm() {
           ? {
               ...item,
               status: "indexing",
-              message: "Still indexing in Dify. Check the Knowledge page if this takes a while.",
+              message:
+                "Still indexing in Dify. Check Knowledge in Dify if this takes a while.",
             }
           : item,
       ),
@@ -142,8 +145,8 @@ export default function UploadForm() {
   }
 
   async function uploadAll() {
-    if (!datasetId) {
-      setLoadError("Select a knowledge base first.");
+    if (!corpusConfigured) {
+      setLoadError("Configure DIFY_DATASET_TEXTBOOK first.");
       return;
     }
     if (files.length === 0) {
@@ -172,7 +175,7 @@ export default function UploadForm() {
       try {
         const form = new FormData();
         form.append("file", file);
-        form.append("datasetId", datasetId);
+        form.append("corpus", corpus);
 
         const response = await fetch("/api/upload", {
           method: "POST",
@@ -205,7 +208,7 @@ export default function UploadForm() {
         );
 
         if (body.batch && body.datasetId) {
-          await pollIndexing(itemId, body.datasetId, body.batch);
+          await pollIndexing(itemId, body.batch, body.datasetId);
         }
       } catch (error) {
         const message =
@@ -227,14 +230,17 @@ export default function UploadForm() {
     }
   }
 
+  const envKey = "DIFY_DATASET_TEXTBOOK";
+
   return (
-    <div className="w-full max-w-xl space-y-6">
-      {configured === false ? (
-        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Add <code className="font-mono">DIFY_API_KEY</code> to{" "}
-          <code className="font-mono">.env.local</code>, then restart the app.
-        </p>
-      ) : null}
+    <div className="w-full max-w-layout-form space-y-6">
+      <EnvConfigBanner
+        configured={Boolean(knowledgeConfigured && corpusConfigured)}
+        deployHint={deployHint}
+        envKey={
+          knowledgeConfigured && !corpusConfigured ? envKey : "DIFY_API_KEY"
+        }
+      />
 
       {loadError ? (
         <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -242,27 +248,13 @@ export default function UploadForm() {
         </p>
       ) : null}
 
-      <label className="block space-y-2">
-        <span className="text-sm font-medium text-zinc-800">Knowledge base</span>
-        <select
-          className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-base text-zinc-900 outline-none ring-emerald-500/30 focus:ring-4 disabled:bg-zinc-50"
-          value={datasetId}
-          disabled={locked || busy || datasets.length === 0}
-          onChange={(event) => setDatasetId(event.target.value)}
-        >
-          <option value="">
-            {datasets.length === 0 ? "No knowledge bases found" : "Choose a knowledge base"}
-          </option>
-          {datasets.map((dataset) => (
-            <option key={dataset.id} value={dataset.id}>
-              {dataset.name}
-              {typeof dataset.document_count === "number"
-                ? ` (${dataset.document_count} documents)`
-                : ""}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="rounded-2xl bg-white px-4 py-3 ring-1 ring-zinc-200">
+        <p className="text-sm font-medium text-zinc-900">{meta.title}</p>
+        <p className="mt-1 text-sm text-zinc-500">{meta.uploadHint}</p>
+        <p className="mt-3 text-sm leading-6 text-zinc-600">
+          {meta.uploadDetail}
+        </p>
+      </div>
 
       <div
         className={`rounded-3xl border-2 border-dashed px-6 py-10 text-center transition ${
@@ -284,11 +276,9 @@ export default function UploadForm() {
         }}
       >
         <p className="text-base font-medium text-zinc-900">
-          Drop teaching files here
+          Drop files for {meta.difyName}
         </p>
-        <p className="mt-1 text-sm text-zinc-500">
-          PDF, Word, PowerPoint, Excel, text, Markdown, HTML, CSV
-        </p>
+        <p className="mt-1 text-sm text-zinc-500">Markdown only (.md)</p>
         <button
           type="button"
           className="mt-4 rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white hover:bg-zinc-700"
@@ -337,7 +327,7 @@ export default function UploadForm() {
       <button
         type="button"
         onClick={() => void uploadAll()}
-        disabled={busy || !datasetId || files.length === 0}
+        disabled={busy || !corpusConfigured || files.length === 0}
         className="w-full rounded-full bg-emerald-600 px-5 py-3 text-base font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-zinc-300"
       >
         {busy ? "Uploading to Dify Knowledge…" : "Upload to Dify Knowledge"}

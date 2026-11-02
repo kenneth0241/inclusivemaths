@@ -1,0 +1,79 @@
+[
+  { "id": "01", "name": "Au Yeung Chun (歐陽俊)", "class": "1A" },
+  { "id": "02", "name": "Chan Mei Ling (陳美玲)", "class": "1A" },
+  { "id": "03", "name": "Cheung Ka Ho (張家豪)", "class": "1A" },
+  { "id": "04", "name": "Chow Tsz Ching (周芷晴)", "class": "1A" },
+  { "id": "05", "name": "Ho Yuet Yee (何悅兒)", "class": "1A" },
+  { "id": "06", "name": "Kwok Chi Kin (郭志健)", "class": "1A" },
+  { "id": "07", "name": "Lam Wing Yan (林穎欣)", "class": "1A" },
+  { "id": "08", "name": "Lau Chun Hei (劉晉熙)", "class": "1A" },
+  { "id": "09", "name": "Lee Ka Yan (李嘉恩)", "class": "1A" },
+  { "id": "10", "name": "Leung Pak Hei (梁柏熙)", "class": "1A" },
+  { "id": "01", "name": "Mak Tsz Kiu (麥子翹)", "class": "1B" },
+  { "id": "02", "name": "Ng Hoi Ching (吳凱晴)", "class": "1B" },
+  { "id": "03", "name": "Poon Yat Long (潘溢朗)", "class": "1B" },
+  { "id": "04", "name": "Sin Nga Man (冼雅雯)", "class": "1B" },
+  { "id": "05", "name": "Tam Cheuk Ying (譚卓瀅)", "class": "1B" },
+  { "id": "06", "name": "Wong Tsz Yau (黃芷悠)", "class": "1B" },
+  { "id": "07", "name": "Yip Ho Yin (葉浩然)", "class": "1B" },
+  {
+    "id": "08",
+    "name": "Lee Siu Kai (李兆佳)",
+    "class": "1B",
+    "sen_type": "Attention Deficit/Hyperactivity Disorder (AD/HD) / 專注力不足/過度活躍症",
+    "current_performance": {
+      "strengths_and_interests": "Has a good memory. Shows curiosity in learning. Enjoys extra-curricular activities. / 記憶力良好，對學習具好奇心，喜歡參與課外活動。",
+      "weaknesses": "Gets distracted easily, sustains attention for only 4-5 minutes. Weak in impulse-control. / 上課容易分心，專注力僅維持4至5分鐘。衝動控制較弱。"
+    },
+    "domains": {
+      "learning_adjustment": {
+        "tier_1_support": "Use visual cue cards consistently. Break tasks into small 5-minute segments. Reduce written assignments to 60%. / 使用視覺提示卡，將學習任務拆解為5分鐘的小節，減少抄寫功課量至60%。",
+        "tier_2_and_3_support": "Devise an individualized reward plan for task completion. / 設立個人化的完成任務獎勵計劃。"
+      },
+      "social_behavioral_adjustment": {
+        "tier_1_support": "Adopt 'Three Principles of Interpersonal Interactions'. Increase paired-work. / 採用「人際互動三原則」，增加小組配對工作。",
+        "tier_2_and_3_support": "Role-play social scenarios in individual sessions. / 透過個別輔導進行社交情境角色扮演。"
+      }
+    }
+  },
+  {
+    "id": "09",
+    "name": "Chan Ka Ming (陳家明)",
+    "class": "1B",
+    "sen_type": "Specific Learning Difficulties (SpLD) / 特殊學習困難 (讀寫障礙)",
+    "current_performance": {
+      "strengths_and_interests": "Strong verbal communication skills. Creative and enjoys visual arts. / 口語表達能力強，具創意，喜歡視覺藝術。",
+      "weaknesses": "Slow reading speed. Struggles with text-heavy math word problems. Frequently reverses numbers (e.g., 12 and 21). / 閱讀速度慢，難以理解多字的數學應用題，常寫反數字。"
+    },
+    "domains": {
+      "learning_adjustment": {
+        "tier_1_support": "Read word problems aloud. Use Concrete-Pictorial-Abstract (CPA) models. Enlarge text size on worksheets. / 朗讀應用題，使用「具體-圖像-抽象」模型，放大工作紙字體。",
+        "tier_2_and_3_support": "Small group remedial reading and structural decoding training. / 小組抽離進行閱讀及拆字訓練。"
+      },
+      "social_behavioral_adjustment": {
+        "tier_1_support": "Provide frequent positive reinforcement to build self-esteem. / 提供頻密的正向鼓勵以建立自信心。",
+        "tier_2_and_3_support": ""
+      }
+    }
+  },
+  {
+    "id": "10",
+    "name": "Cheung Siu Ling (張少玲)",
+    "class": "1B",
+    "sen_type": "Autism Spectrum Disorder (ASD) / 自閉症譜系障礙",
+    "current_performance": {
+      "strengths_and_interests": "Strong visual-spatial reasoning. Strictly follows routines and clear rules. / 視覺空間邏輯強，能嚴格遵守常規和清晰指示。",
+      "weaknesses": "Struggles with abstract concepts and sudden changes in lesson flow. Weak peer interactions. / 難以理解抽象概念及突發的課堂流程轉變，同儕互動較弱。"
+    },
+    "domains": {
+      "learning_adjustment": {
+        "tier_1_support": "Provide explicit visual schedules before class. Give clear, step-by-step instructions. / 課前提供清晰的視覺日程，給予明確、循序漸進的指示。",
+        "tier_2_and_3_support": "Social stories training for classroom transitions. / 運用社交故事訓練適應課堂轉換。"
+      },
+      "social_behavioral_adjustment": {
+        "tier_1_support": "Assign a fixed, predictable role during group work. / 在小組工作時分配固定、可預測的角色。",
+        "tier_2_and_3_support": "Join social skills training group. / 參加社交技巧訓練小組。"
+      }
+    }
+  }
+]

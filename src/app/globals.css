@@ -1,26 +1,116 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4f7f5;
+  --foreground: #16302b;
+  --paper: #f4f7f5;
+  --teal: #0f766e;
+  --sky: #0284c7;
+  /** Horizontal inset: 5% viewport each side (90% content width). */
+  --site-gutter: 5vw;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-paper: #f4f7f5;
+  --color-teal-ink: #0f766e;
+  --color-sky-lock: #0284c7;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* ~10% wider than default Tailwind max-width scale */
+  --max-width-layout-wide: 88rem;
+  --max-width-layout: 79.2rem;
+  --max-width-layout-medium: 61.6rem;
+  --max-width-layout-narrow: 52.8rem;
+  --max-width-layout-prose: 46.2rem;
+  --max-width-layout-form: 39.6rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #f4f7f5;
+    --foreground: #16302b;
   }
 }
 
 body {
-  background: var(--background);
+  background: var(--paper);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  box-sizing: border-box;
+  padding-inline: var(--site-gutter);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+@keyframes studio-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes footprint-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgb(2 132 199 / 0.35);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgb(2 132 199 / 0);
+  }
+}
+
+@keyframes unlock-pop {
+  0% {
+    opacity: 0.65;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.studio-enter {
+  animation: studio-enter 220ms ease-out;
+}
+
+.footprint-flash {
+  animation: footprint-flash 700ms ease-out;
+}
+
+.unlock-pop {
+  animation: unlock-pop 220ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-enter,
+  .footprint-flash,
+  .unlock-pop {
+    animation: none;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+    padding-inline: 0;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-worksheet {
+    box-shadow: none !important;
+    border: none !important;
+  }
 }

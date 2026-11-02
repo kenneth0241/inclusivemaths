@@ -1,15 +1,23 @@
 import { NextResponse } from "next/server";
-import { difyFetch, getDifyConfig, readDifyError } from "@/lib/dify";
+import { isMarkdownUploadFile } from "@/lib/corpus";
+import {
+  difyFetch,
+  readDifyError,
+  resolveDatasetFromRequest,
+} from "@/lib/dify";
 
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
   try {
-    const { lockedDatasetId } = getDifyConfig();
     const form = await request.formData();
     const file = form.get("file");
+    const corpus = String(form.get("corpus") ?? "").trim();
     const requestedDatasetId = String(form.get("datasetId") ?? "").trim();
-    const datasetId = lockedDatasetId || requestedDatasetId;
+    const datasetId = resolveDatasetFromRequest({
+      corpus,
+      datasetId: requestedDatasetId,
+    });
 
     if (!datasetId) {
       return NextResponse.json(
@@ -21,6 +29,16 @@ export async function POST(request: Request) {
     if (!(file instanceof File) || file.size === 0) {
       return NextResponse.json(
         { error: "Please choose a file to upload." },
+        { status: 400 },
+      );
+    }
+
+    if (!isMarkdownUploadFile(file)) {
+      return NextResponse.json(
+        {
+          error:
+            "Only Markdown files (.md or .markdown) can be uploaded to the textbook knowledge base.",
+        },
         { status: 400 },
       );
     }
