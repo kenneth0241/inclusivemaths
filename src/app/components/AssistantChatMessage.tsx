@@ -8,17 +8,24 @@ import {
 } from "@/lib/chat-think";
 import type { DifyRetrieverResource } from "@/lib/dify-citations";
 import DifyCitationsList from "./DifyCitationsList";
+import MarkdownRichText from "./MarkdownRichText";
 
 type AssistantChatMessageProps = {
   content: string;
   isStreaming: boolean;
   citations?: DifyRetrieverResource[];
+  /** Pedagogy refine: do not strip trailing JSON follow-up payloads from the answer. */
+  skipFollowUpExtraction?: boolean;
+  /** Render the visible answer with GFM markdown (tables, headings, lists). */
+  useMarkdown?: boolean;
 };
 
 export default function AssistantChatMessage({
   content,
   isStreaming,
   citations = [],
+  skipFollowUpExtraction = false,
+  useMarkdown = false,
 }: AssistantChatMessageProps) {
   const { think, answer } = splitChatThinkContent(content);
   const [manuallyOpen, setManuallyOpen] = useState(false);
@@ -26,7 +33,9 @@ export default function AssistantChatMessage({
 
   const answerBody = answer || (!think ? content : "");
   const visibleAnswer = answerBody
-    ? extractLastFollowUpPayload(answerBody).textWithout
+    ? skipFollowUpExtraction
+      ? answerBody
+      : extractLastFollowUpPayload(answerBody).textWithout
     : "";
 
   return (
@@ -61,9 +70,16 @@ export default function AssistantChatMessage({
       ) : null}
 
       {visibleAnswer ? (
-        <p className="whitespace-pre-wrap leading-normal">
-          {formatChatDisplayText(visibleAnswer)}
-        </p>
+        useMarkdown ? (
+          <MarkdownRichText
+            content={formatChatDisplayText(visibleAnswer)}
+            className="leading-normal"
+          />
+        ) : (
+          <p className="whitespace-pre-wrap leading-normal">
+            {formatChatDisplayText(visibleAnswer)}
+          </p>
+        )
       ) : isStreaming ? (
         <p className="text-sm text-zinc-500">
           {think ? "Composing reply…" : "…"}

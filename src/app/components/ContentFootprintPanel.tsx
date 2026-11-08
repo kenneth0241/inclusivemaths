@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import type { StudioAnalysisView } from "@/lib/chat-topic-analysis";
 import { BilingualStack } from "./Bilingual";
+import FootprintFieldFeedback from "./FootprintFieldFeedback";
 import FootprintFieldInfo from "./FootprintFieldInfo";
 import {
   isFootprintReady,
@@ -48,16 +49,19 @@ function FootprintSectionTitle() {
 }
 
 function FieldQualityIndex({
+  field,
   score,
   threshold,
   feedback,
   loading,
 }: {
+  field: FootprintField;
   score: number;
   threshold: number;
   feedback: string | null;
   loading: boolean;
 }) {
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const maxScore = 5;
   const barColor =
     score >= threshold
@@ -66,8 +70,11 @@ function FieldQualityIndex({
         ? "bg-amber-400"
         : "bg-zinc-300";
   const barPercent = score > 0 ? (score / maxScore) * 100 : 0;
+  const feedbackText = feedback?.trim() ?? "";
+  const showFeedback = feedbackText.length > 0 && !loading;
 
   return (
+  <>
     <div className="rounded-xl bg-white/80 px-3 py-2 ring-1 ring-zinc-200/80">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <BilingualStack
@@ -104,21 +111,45 @@ function FieldQualityIndex({
           style={{ width: `${loading ? 0 : barPercent}%` }}
         />
       </div>
-      {feedback && !loading ? (
-        <div className="mt-2 border-t border-zinc-100 pt-2">
+      {showFeedback ? (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            setFeedbackOpen(true);
+          }}
+          className="mt-2 w-full rounded-lg border border-zinc-100 bg-zinc-50/80 px-2.5 py-2 text-left transition hover:border-teal-100 hover:bg-teal-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50"
+          aria-haspopup="dialog"
+          aria-expanded={feedbackOpen}
+        >
           <BilingualStack
             zh="回饋"
             en="Feedback"
             layout="inline"
-            zhClassName="text-[11px] font-semibold text-zinc-600"
-            enClassName="text-[11px] text-zinc-400"
+            zhClassName="text-[11px] font-semibold text-zinc-700"
+            enClassName="text-[11px] text-zinc-500"
           />
-          <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-zinc-600">
-            {feedback}
+          <p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-600">
+            {feedbackText}
           </p>
-        </div>
+          <p className="mt-1 text-[11px] font-medium text-teal-ink">
+            <BilingualStack
+              zh="點擊查看完整回饋"
+              en="Tap for full feedback"
+              layout="inline"
+              enClassName="text-teal-700/80"
+            />
+          </p>
+        </button>
       ) : null}
     </div>
+    <FootprintFieldFeedback
+      field={field}
+      feedback={feedbackText}
+      open={feedbackOpen}
+      onClose={() => setFeedbackOpen(false)}
+    />
+  </>
   );
 }
 
@@ -137,6 +168,7 @@ export default function ContentFootprintPanel({
   onChange,
   studio,
 }: ContentFootprintPanelProps) {
+  const fieldIdPrefix = useId();
   const { analysis, busy, loading, error, difyConfigured } = studio;
   const ready = isFootprintReady(footprint);
   const filledCount = FIELDS.filter((field) => footprint[field.key].trim()).length;
@@ -159,12 +191,17 @@ export default function ContentFootprintPanel({
         en: "Local rules when Dify is off. Edit to lock a field.",
       };
 
+  const topicSummaryText =
+    footprint.topicSummary.trim() || analysis.summary?.trim() || "";
+  const showTopicSummary =
+    difyConfigured && (loading || topicSummaryText.length > 0);
+
   return (
     <section
       className={`flex flex-col gap-3 ${compact ? "" : "rounded-3xl bg-white p-4 ring-1 ring-teal-100 sm:p-5"}`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <FootprintSectionTitle />
           <p className="mt-2 text-sm leading-6 text-zinc-600">
             <BilingualStack
@@ -174,25 +211,6 @@ export default function ContentFootprintPanel({
               enClassName="text-zinc-500"
             />
           </p>
-          {difyConfigured &&
-          (loading || analysis.summary?.trim()) ? (
-            <div className="mt-3 rounded-xl bg-teal-50/60 px-3 py-2.5 ring-1 ring-teal-100">
-              <BilingualStack
-                zh="主題摘要"
-                en="Topic summary"
-                layout="inline"
-                zhClassName="text-xs font-semibold text-teal-900"
-                enClassName="text-xs text-teal-800/70"
-              />
-              {loading && !analysis.summary?.trim() ? (
-                <p className="mt-1 text-sm text-zinc-500">…</p>
-              ) : (
-                <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-zinc-700">
-                  {analysis.summary?.trim()}
-                </p>
-              )}
-            </div>
-          ) : null}
         </div>
         <span
           className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
@@ -203,19 +221,40 @@ export default function ContentFootprintPanel({
         </span>
       </div>
 
+      {showTopicSummary ? (
+        <div className="block w-full rounded-2xl bg-zinc-50 p-3 ring-1 ring-zinc-200">
+          <span className="flex min-w-0 items-start gap-1">
+            <BilingualStack
+              zh="主題摘要"
+              en="Topic summary"
+              zhClassName="text-sm font-semibold text-zinc-900"
+              enClassName="text-zinc-500"
+            />
+          </span>
+          <textarea
+            readOnly
+            rows={compact ? 3 : 4}
+            value={loading && !topicSummaryText ? "…" : topicSummaryText}
+            aria-label="主題摘要 · Topic summary"
+            className="mt-3 w-full resize-y rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm leading-6 text-zinc-900 outline-none read-only:cursor-default read-only:bg-white"
+          />
+        </div>
+      ) : null}
+
       {FIELDS.map((field) => {
         const value = footprint[field.key];
         const locked = value.trim().length > 0;
         const teacherEdited = footprint.edited[field.key];
+        const textareaId = `${fieldIdPrefix}-${field.key}`;
         return (
-          <label
+          <div
             key={field.key}
             className={`block rounded-2xl p-3 ring-1 ${
               flashed[field.key] ? "footprint-flash ring-sky-300" : "ring-zinc-200"
             } ${locked ? "bg-sky-50/50" : "bg-zinc-50"}`}
           >
-            <span className="flex items-start justify-between gap-2">
-              <span className="flex min-w-0 items-start gap-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex min-w-0 items-start gap-1">
                 <BilingualStack
                   zh={field.zh}
                   en={field.en}
@@ -223,7 +262,7 @@ export default function ContentFootprintPanel({
                   enClassName="text-zinc-500"
                 />
                 <FootprintFieldInfo field={field.key} />
-              </span>
+              </div>
               {locked ? (
                 <span className="shrink-0 text-[11px] font-medium text-sky-lock">
                   <BilingualStack
@@ -233,16 +272,21 @@ export default function ContentFootprintPanel({
                   />
                 </span>
               ) : null}
-            </span>
+            </div>
 
             <div className="mt-3 space-y-2">
               <FieldQualityIndex
+                field={field.key}
                 score={qualityByField[field.key]}
                 threshold={analysis.quality.threshold}
                 feedback={feedbackByField[field.key]}
                 loading={loading}
               />
+              <label htmlFor={textareaId} className="sr-only">
+                {field.zh} · {field.en}
+              </label>
               <textarea
+                id={textareaId}
                 rows={compact ? 3 : 4}
                 value={value}
                 onChange={(event) => onChange(field.key, event.target.value)}
@@ -251,7 +295,7 @@ export default function ContentFootprintPanel({
                 className="w-full resize-y rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm leading-6 text-zinc-900 outline-none ring-sky-500/20 placeholder:text-zinc-400 focus:ring-4"
               />
             </div>
-          </label>
+          </div>
         );
       })}
 

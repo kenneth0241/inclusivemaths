@@ -5,74 +5,169 @@
   { "id": "04", "name": "Chow Tsz Ching (周芷晴)", "class": "1A" },
   { "id": "05", "name": "Ho Yuet Yee (何悅兒)", "class": "1A" },
   { "id": "06", "name": "Kwok Chi Kin (郭志健)", "class": "1A" },
-  { "id": "07", "name": "Lam Wing Yan (林穎欣)", "class": "1A" },
-  { "id": "08", "name": "Lau Chun Hei (劉晉熙)", "class": "1A" },
-  { "id": "09", "name": "Lee Ka Yan (李嘉恩)", "class": "1A" },
-  { "id": "10", "name": "Leung Pak Hei (梁柏熙)", "class": "1A" },
-  { "id": "01", "name": "Mak Tsz Kiu (麥子翹)", "class": "1B" },
-  { "id": "02", "name": "Ng Hoi Ching (吳凱晴)", "class": "1B" },
-  { "id": "03", "name": "Poon Yat Long (潘溢朗)", "class": "1B" },
-  { "id": "04", "name": "Sin Nga Man (冼雅雯)", "class": "1B" },
-  { "id": "05", "name": "Tam Cheuk Ying (譚卓瀅)", "class": "1B" },
-  { "id": "06", "name": "Wong Tsz Yau (黃芷悠)", "class": "1B" },
-  { "id": "07", "name": "Yip Ho Yin (葉浩然)", "class": "1B" },
   {
-    "id": "08",
-    "name": "Lee Siu Kai (李兆佳)",
-    "class": "1B",
-    "sen_type": "Attention Deficit/Hyperactivity Disorder (AD/HD) / 專注力不足/過度活躍症",
+    "id": "07",
+    "name": "Lam Wing Yan (林穎欣)",
+    "class": "1A",
+    "sen_type": "Specific Learning Difficulties (SpLD) - Dyslexia",
     "current_performance": {
-      "strengths_and_interests": "Has a good memory. Shows curiosity in learning. Enjoys extra-curricular activities. / 記憶力良好，對學習具好奇心，喜歡參與課外活動。",
-      "weaknesses": "Gets distracted easily, sustains attention for only 4-5 minutes. Weak in impulse-control. / 上課容易分心，專注力僅維持4至5分鐘。衝動控制較弱。"
+      "strengths_and_interests": "Strong verbal reasoning and oral calculation. / 口語邏輯及心算能力強。",
+      "weaknesses": "(Mild) Reverses similar-looking numbers (e.g., 6 and 9, 12 and 21) and reads slowly. / (輕度) 常寫反相似數字（如6和9，12和21），閱讀速度較慢。"
     },
     "domains": {
       "learning_adjustment": {
-        "tier_1_support": "Use visual cue cards consistently. Break tasks into small 5-minute segments. Reduce written assignments to 60%. / 使用視覺提示卡，將學習任務拆解為5分鐘的小節，減少抄寫功課量至60%。",
-        "tier_2_and_3_support": "Devise an individualized reward plan for task completion. / 設立個人化的完成任務獎勵計劃。"
+        "tier_1_support": "Highlight key numbers and math terms in word problems. Allow 15% extra time. / 在應用題中用螢光筆標示關鍵字和數字，給予15%額外時間。",
+        "tier_2_and_3_support": "Phonics and decoding training in resource class. / 資源班進行語音及拆字訓練。"
       },
       "social_behavioral_adjustment": {
-        "tier_1_support": "Adopt 'Three Principles of Interpersonal Interactions'. Increase paired-work. / 採用「人際互動三原則」，增加小組配對工作。",
-        "tier_2_and_3_support": "Role-play social scenarios in individual sessions. / 透過個別輔導進行社交情境角色扮演。"
-      }
-    }
-  },
-  {
-    "id": "09",
-    "name": "Chan Ka Ming (陳家明)",
-    "class": "1B",
-    "sen_type": "Specific Learning Difficulties (SpLD) / 特殊學習困難 (讀寫障礙)",
-    "current_performance": {
-      "strengths_and_interests": "Strong verbal communication skills. Creative and enjoys visual arts. / 口語表達能力強，具創意，喜歡視覺藝術。",
-      "weaknesses": "Slow reading speed. Struggles with text-heavy math word problems. Frequently reverses numbers (e.g., 12 and 21). / 閱讀速度慢，難以理解多字的數學應用題，常寫反數字。"
-    },
-    "domains": {
-      "learning_adjustment": {
-        "tier_1_support": "Read word problems aloud. Use Concrete-Pictorial-Abstract (CPA) models. Enlarge text size on worksheets. / 朗讀應用題，使用「具體-圖像-抽象」模型，放大工作紙字體。",
-        "tier_2_and_3_support": "Small group remedial reading and structural decoding training. / 小組抽離進行閱讀及拆字訓練。"
-      },
-      "social_behavioral_adjustment": {
-        "tier_1_support": "Provide frequent positive reinforcement to build self-esteem. / 提供頻密的正向鼓勵以建立自信心。",
+        "tier_1_support": "Praise effort rather than speed to reduce reading anxiety. / 讚揚其付出的努力而非速度，以減輕閱讀焦慮。",
         "tier_2_and_3_support": ""
       }
     }
   },
   {
-    "id": "10",
-    "name": "Cheung Siu Ling (張少玲)",
-    "class": "1B",
-    "sen_type": "Autism Spectrum Disorder (ASD) / 自閉症譜系障礙",
+    "id": "08",
+    "name": "Lau Chun Hei (劉晉熙)",
+    "class": "1A",
+    "sen_type": "Specific Learning Difficulties (SpLD) - Dyslexia",
     "current_performance": {
-      "strengths_and_interests": "Strong visual-spatial reasoning. Strictly follows routines and clear rules. / 視覺空間邏輯強，能嚴格遵守常規和清晰指示。",
-      "weaknesses": "Struggles with abstract concepts and sudden changes in lesson flow. Weak peer interactions. / 難以理解抽象概念及突發的課堂流程轉變，同儕互動較弱。"
+      "strengths_and_interests": "Excellent visual-spatial skills, good at geometry. / 視覺空間能力優異，擅長圖形與空間。",
+      "weaknesses": "(Moderate) Extremely poor working memory for multi-step word problems. Forgets the first part of a sentence by the time he reaches the end. / (中度) 處理多步驟應用題時工作記憶極弱，讀到句尾會忘記句首內容。"
     },
     "domains": {
       "learning_adjustment": {
-        "tier_1_support": "Provide explicit visual schedules before class. Give clear, step-by-step instructions. / 課前提供清晰的視覺日程，給予明確、循序漸進的指示。",
-        "tier_2_and_3_support": "Social stories training for classroom transitions. / 運用社交故事訓練適應課堂轉換。"
+        "tier_1_support": "Break down word problems into single, isolated sentences. Use Concrete-Pictorial-Abstract (CPA) models to bypass text. / 將應用題拆解為單一獨立句子。使用「具體-圖像-抽象」(CPA) 模型來避開繁重文字。",
+        "tier_2_and_3_support": "Working memory training strategies with SENCO. / 與特殊教育統籌主任進行工作記憶策略訓練。"
       },
       "social_behavioral_adjustment": {
-        "tier_1_support": "Assign a fixed, predictable role during group work. / 在小組工作時分配固定、可預測的角色。",
-        "tier_2_and_3_support": "Join social skills training group. / 參加社交技巧訓練小組。"
+        "tier_1_support": "Check for understanding frequently before he starts working. / 在他開始作答前，頻密檢查其是否理解指示。",
+        "tier_2_and_3_support": ""
+      }
+    }
+  },
+  {
+    "id": "09",
+    "name": "Lee Ka Yan (李嘉恩)",
+    "class": "1A",
+    "sen_type": "Specific Learning Difficulties (SpLD) - Dyslexia",
+    "current_performance": {
+      "strengths_and_interests": "Enjoys collaborative work and hands-on activities. / 喜歡小組合作和動手做的活動。",
+      "weaknesses": "(Severe) Severe visual tracking issues. Skips lines when reading and experiences high visual fatigue with standard worksheets. / (嚴重) 嚴重的視覺追蹤困難，閱讀時常跳行，面對一般工作紙極易產生視覺疲勞。"
+    },
+    "domains": {
+      "learning_adjustment": {
+        "tier_1_support": "Enlarge text (Size 16+), double line spacing, and use reading rulers. Teacher or peer must read instructions aloud. / 放大字體（16號或以上），雙倍行距，使用閱讀尺。教師或同儕須朗讀指示。",
+        "tier_2_and_3_support": "Use text-to-speech software for assessments. / 評估時使用文字轉語音軟件。"
+      },
+      "social_behavioral_adjustment": {
+        "tier_1_support": "Pair with a supportive peer reader during group work. / 在小組活動時安排一位具支援性的朋輩伴讀。",
+        "tier_2_and_3_support": "Counseling to manage low academic self-esteem. / 輔導以處理低落的學業自信心。"
+      }
+    }
+  },
+  {
+    "id": "10",
+    "name": "Leung Pak Hei (梁柏熙)",
+    "class": "1A",
+    "sen_type": "Specific Learning Difficulties (SpLD) - Dysgraphia",
+    "current_performance": {
+      "strengths_and_interests": "Understands math concepts quickly, strong logical thinking. / 能快速理解數學概念，邏輯思維強。",
+      "weaknesses": "Poor fine motor skills. Handwriting is illegible, and he cannot align numbers vertically for column addition. / 小肌肉發展較弱。字體難以辨認，無法將數字對齊以進行直式加減運算。"
+    },
+    "domains": {
+      "learning_adjustment": {
+        "tier_1_support": "Provide grid paper with large boxes to help align numbers. Allow oral answers for simple calculations. / 提供大格子的網格紙協助對齊數字。簡單運算允許口頭作答。",
+        "tier_2_and_3_support": "Occupational therapy for fine motor skills. / 職業治療以訓練小肌肉技巧。"
+      },
+      "social_behavioral_adjustment": {
+        "tier_1_support": "Do not penalize for untidy handwriting if the logic is correct. / 若邏輯正確，不因字體潦草而扣分。",
+        "tier_2_and_3_support": ""
+      }
+    }
+  },
+  { "id": "11", "name": "Mak Tsz Kiu (麥子翹)", "class": "1B" },
+  { "id": "12", "name": "Ng Hoi Ching (吳凱晴)", "class": "1B" },
+  { "id": "13", "name": "Poon Yat Long (潘溢朗)", "class": "1B" },
+  { "id": "14", "name": "Sin Nga Man (冼雅雯)", "class": "1B" },
+  { "id": "15", "name": "Tam Cheuk Ying (譚卓瀅)", "class": "1B" },
+  { "id": "16", "name": "Wong Tsz Yau (黃芷悠)", "class": "1B" },
+  {
+    "id": "17",
+    "name": "Yip Ho Yin (葉浩然)",
+    "class": "1B",
+    "sen_type": "Attention Deficit / Hyperactivity Disorder (AD/HD)",
+    "current_performance": {
+      "strengths_and_interests": "Highly creative and energetic. / 具高度創意，精力充沛。",
+      "weaknesses": "(Hyperactive-Impulsive) Leaves seat frequently, fidgets constantly, and blurts out answers before thinking. / (過度活躍/衝動型) 經常離座、坐立不安，未經思考便搶答。"
+    },
+    "domains": {
+      "learning_adjustment": {
+        "tier_1_support": "Incorporate movement breaks. Allow standing at desk to work. / 融入活動小休，允許站在桌旁完成工作。",
+        "tier_2_and_3_support": "Use token economy system for remaining on task. / 使用代幣制獎勵其持續專注。"
+      },
+      "social_behavioral_adjustment": {
+        "tier_1_support": "Teach hand-raising rules and praise immediately when he waits his turn. / 教導舉手發言規則，當他能輪候時立即給予讚賞。",
+        "tier_2_and_3_support": "Behavioral management group training. / 行為管理小組訓練。"
+      }
+    }
+  },
+  {
+    "id": "18",
+    "name": "Lee Siu Kai (李兆佳)",
+    "class": "1B",
+    "sen_type": "Attention Deficit / Hyperactivity Disorder (AD/HD)",
+    "current_performance": {
+      "strengths_and_interests": "Good memory, interested in logic puzzles. / 記憶力好，對邏輯解謎感興趣。",
+      "weaknesses": "(Inattentive) Daydreams easily, misses oral instructions, and struggles to initiate tasks. / (注意力不足型) 容易發白日夢，常錯過口頭指示，難以開始動手做功課。"
+    },
+    "domains": {
+      "learning_adjustment": {
+        "tier_1_support": "Seat in front row near teacher. Use physical/visual cues to regain attention before giving instructions. / 安排坐在前排近教師位置。給予指示前使用肢體或視覺提示以吸引其注意。",
+        "tier_2_and_3_support": "Provide an individualized step-by-step checklist on his desk. / 在其桌上提供個人化的逐步完成清單。"
+      },
+      "social_behavioral_adjustment": {
+        "tier_1_support": "Use non-verbal cues (like tapping desk) to gently redirect attention. / 使用非語言提示（如輕敲桌面）溫和地重新引導其專注力。",
+        "tier_2_and_3_support": ""
+      }
+    }
+  },
+  {
+    "id": "19",
+    "name": "Chan Ka Ming (陳家明)",
+    "class": "1B",
+    "sen_type": "Attention Deficit / Hyperactivity Disorder (AD/HD)",
+    "current_performance": {
+      "strengths_and_interests": "Very fast processor, understands concepts instantly. / 訊息處理速度極快，能瞬間理解概念。",
+      "weaknesses": "(Combined) Rushes through work, makes numerous careless calculation errors. / (混合型) 做事過急，常犯大量粗心大意的運算錯誤。"
+    },
+    "domains": {
+      "learning_adjustment": {
+        "tier_1_support": "Cover parts of the worksheet to limit focus to one question at a time. Teach self-checking routines. / 遮擋部分工作紙以限制其每次只專注一題，教導自我檢查的常規。",
+        "tier_2_and_3_support": "Reduce written workload to ensure quality over quantity. / 減少抄寫功課量，重質不重量。"
+      },
+      "social_behavioral_adjustment": {
+        "tier_1_support": "Assign the role of distributing materials to channel excess energy purposefully. / 安排派發物資的角色，有目的地引導其過剩精力。",
+        "tier_2_and_3_support": ""
+      }
+    }
+  },
+  {
+    "id": "20",
+    "name": "Cheung Siu Ling (張少玲)",
+    "class": "1B",
+    "sen_type": "Autism Spectrum Disorder (ASD)",
+    "current_performance": {
+      "strengths_and_interests": "Excellent rote calculation skills, loves patterns and rules. / 機械式運算能力極佳，喜歡規律和法則。",
+      "weaknesses": "Highly rigid thinking. Panics if the lesson flow changes unexpectedly or if asked to solve a problem using a 'new' method. / 思維極度固執。若課堂流程突然改變，或被要求用「新」方法解題時會感到恐慌。"
+    },
+    "domains": {
+      "learning_adjustment": {
+        "tier_1_support": "Provide a clear visual schedule. Explicitly explain the connection between 'old' methods and 'new' methods before transitioning. / 提供清晰的視覺日程。在過渡前，明確解釋「舊」方法與「新」方法之間的關聯。",
+        "tier_2_and_3_support": "Use social stories to prepare for changes in routine. / 運用社交故事為常規轉變作準備。"
+      },
+      "social_behavioral_adjustment": {
+        "tier_1_support": "Give warning 5 minutes before transitioning to a new activity. Keep group work roles highly structured. / 轉換活動前5分鐘給予預告。保持小組工作的角色具高度結構性。",
+        "tier_2_and_3_support": "Social skills training group. / 社交技巧訓練小組。"
       }
     }
   }

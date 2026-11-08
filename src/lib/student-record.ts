@@ -15,14 +15,69 @@ export type CurrentPerformance = {
   weaknesses: string;
 };
 
+export const SEN_TYPE_OPTIONS = [
+  "Specific Learning Difficulties (SpLD) - Dyslexia",
+  "Specific Learning Difficulties (SpLD) - Dyscalculia",
+  "Specific Learning Difficulties (SpLD) - Dysgraphia",
+  "Specific Learning Difficulties (SpLD) - Dyspraxia / Developmental Coordination Disorder",
+  "Attention Deficit / Hyperactivity Disorder (AD/HD)",
+  "Autism Spectrum Disorder (ASD)",
+  "Speech and Language Impairment (SLI)",
+] as const;
+
+export type SenClassification = (typeof SEN_TYPE_OPTIONS)[number];
+
 export type StudentRecord = {
   id: string;
   name: string;
   class: string;
-  sen_type?: string;
+  sen_type?: SenClassification | string;
   current_performance?: CurrentPerformance;
   domains?: IepDomains;
 };
+
+const LEGACY_SEN_TYPE_ALIASES: Record<string, SenClassification> = {
+  "Attention Deficit/Hyperactivity Disorder (AD/HD) / 專注力不足/過度活躍症":
+    "Attention Deficit / Hyperactivity Disorder (AD/HD)",
+  "Specific Learning Difficulties (SpLD) / 特殊學習困難 (讀寫障礙)":
+    "Specific Learning Difficulties (SpLD) - Dyslexia",
+  "Autism Spectrum Disorder (ASD) / 自閉症譜系障礙":
+    "Autism Spectrum Disorder (ASD)",
+};
+
+export function isValidSenType(value: string): value is SenClassification {
+  return (SEN_TYPE_OPTIONS as readonly string[]).includes(value);
+}
+
+export function normalizeSenType(raw: string): SenClassification | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  if (isValidSenType(trimmed)) {
+    return trimmed;
+  }
+  return LEGACY_SEN_TYPE_ALIASES[trimmed];
+}
+
+const SEN_TYPE_SHORT_LABELS: Record<SenClassification, string> = {
+  "Specific Learning Difficulties (SpLD) - Dyslexia": "SpLD-Dyslexia",
+  "Specific Learning Difficulties (SpLD) - Dyscalculia": "SpLD-Dyscalculia",
+  "Specific Learning Difficulties (SpLD) - Dysgraphia": "SpLD-Dysgraphia",
+  "Specific Learning Difficulties (SpLD) - Dyspraxia / Developmental Coordination Disorder":
+    "SpLD-Dyspraxia",
+  "Attention Deficit / Hyperactivity Disorder (AD/HD)": "AD/HD",
+  "Autism Spectrum Disorder (ASD)": "ASD",
+  "Speech and Language Impairment (SLI)": "SLI",
+};
+
+export function senTypeShortLabel(senType: string | undefined) {
+  const normalized = normalizeSenType(senType ?? "");
+  if (!normalized) {
+    return null;
+  }
+  return SEN_TYPE_SHORT_LABELS[normalized];
+}
 
 export type RosterClass = {
   id: string;
@@ -49,6 +104,11 @@ export function isSenStudent(student: StudentRecord) {
   return Boolean(student.sen_type?.trim());
 }
 
+/** True when the roster editor should show IEP fields (incl. newly enabled SEN). */
+export function isSenProfileOpen(student: StudentRecord) {
+  return student.sen_type !== undefined;
+}
+
 export function inferSenTags(student: StudentRecord): SenTag[] {
   const text = (student.sen_type ?? "").toLowerCase();
   if (!text.trim()) {
@@ -61,6 +121,11 @@ export function inferSenTags(student: StudentRecord): SenTag[] {
   const hasSpld =
     text.includes("spld") ||
     text.includes("learning difficult") ||
+    text.includes("dyslexia") ||
+    text.includes("dyscalculia") ||
+    text.includes("dysgraphia") ||
+    text.includes("dyspraxia") ||
+    text.includes("speech and language") ||
     text.includes("讀寫");
   const hasAsd =
     text.includes("autism") || text.includes("asd") || text.includes("自閉");
@@ -83,9 +148,10 @@ export function inferSenTags(student: StudentRecord): SenTag[] {
   return ["mixed"];
 }
 
-export function studentListLine(student: StudentRecord) {
+/** Secondary line under the name in pickers; null for general students. */
+export function studentListSubtitle(student: StudentRecord): string | null {
   if (!isSenStudent(student)) {
-    return student.name;
+    return null;
   }
   const perf = student.current_performance;
   if (perf?.weaknesses?.trim()) {
@@ -93,6 +159,25 @@ export function studentListLine(student: StudentRecord) {
     return short.length > 120 ? `${short.slice(0, 117)}…` : short;
   }
   return student.sen_type ?? "SEN support plan on file";
+}
+
+export function mergeInferredSenTags(students: StudentRecord[]): SenTag[] {
+  const tags = new Set<SenTag>();
+  for (const student of students) {
+    for (const tag of inferSenTags(student)) {
+      tags.add(tag);
+    }
+  }
+  if (tags.has("mixed") || (tags.has("spld") && tags.has("adhd"))) {
+    return ["mixed"];
+  }
+  if (tags.has("adhd")) {
+    return ["adhd"];
+  }
+  if (tags.has("spld")) {
+    return ["spld"];
+  }
+  return [];
 }
 
 export function formatIepForWorkflow(student: StudentRecord) {
@@ -211,7 +296,7 @@ export function parseStudentRecord(raw: unknown): StudentRecord | null {
   if (!id || !name || !classId) {
     return null;
   }
-  const sen_type = asString(raw.sen_type).trim() || undefined;
+  const sen_type = normalizeSenType(asString(raw.sen_type));
   const current_performance = parseCurrentPerformance(raw.current_performance);
   const domains = parseDomains(raw.domains);
   const record: StudentRecord = { id, name, class: classId };
@@ -250,6 +335,9 @@ export function validateStudentRecords(students: StudentRecord[]): string | null
     }
     classIdKeys.add(composite);
     if (isSenStudent(student)) {
+      if (!isValidSenType(student.sen_type?.trim() ?? "")) {
+        return `${student.id}: sen_type must be one of the allowed SEN classifications.`;
+      }
       if (!student.current_performance) {
         return `${student.id}: SEN students need current_performance.`;
       }
@@ -282,7 +370,7 @@ export function normalizeStudentForSave(student: StudentRecord): StudentRecord {
     name: student.name.trim(),
     class: student.class.trim(),
   };
-  const senType = student.sen_type?.trim();
+  const senType = normalizeSenType(student.sen_type?.trim() ?? "");
   if (!senType) {
     return base;
   }

@@ -34,7 +34,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `/knowledge` | Redirects to textbook upload |
 | `/knowledge/textbook` | Upload **Markdown only** (.md) and **view** indexed files |
 | `/design` | Design hub (lesson plan) |
-| `/design/lesson` | Lesson plan form → Dify Workflow (streaming) |
+| `/design/pedagogy` | Pedagogical strategy selector → lesson plan at `/design/pedagogy/plan` (Dify workflow) |
 | `/chat` | **Chat with Textbook** (Dify Chatflow, streaming) |
 
 ## Textbook upload

@@ -143,6 +143,155 @@ export function isTopicAnalysisConfigured() {
   }
 }
 
+/** Profile Synthesizer workflow — Step 2 learner + footprint analysis (blocking). */
+export function getProfileSynthesizerConfig() {
+  const apiKey = process.env.DIFY_APP_PROFILE_SYNTHESIS_API_KEY?.trim();
+  const apiBase = (
+    process.env.DIFY_APP_PROFILE_SYNTHESIS_API_BASE ??
+    process.env.DIFY_API_BASE ??
+    "https://api.dify.ai/v1"
+  ).replace(/\/$/, "");
+
+  if (!apiKey || apiKey.includes("xxxxxxxx")) {
+    throw new Error("DIFY_APP_PROFILE_SYNTHESIS_API_KEY is not set");
+  }
+
+  return { apiKey, apiBase };
+}
+
+export function isProfileSynthesizerConfigured() {
+  try {
+    getProfileSynthesizerConfig();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function pedagogyApiBase() {
+  return (
+    process.env.DIFY_APP_PEDAGOGY_API_BASE ??
+    process.env.DIFY_APP_PEDAGOGY_WORKFLOW_API_BASE ??
+    process.env.DIFY_API_BASE ??
+    "https://api.dify.ai/v1"
+  ).replace(/\/$/, "");
+}
+
+/** Pedagogical Strategy workflow — Step 3 page load (POST /workflows/run). */
+export function getPedagogyWorkflowConfig() {
+  const apiKey =
+    process.env.DIFY_APP_PEDAGOGY_WORKFLOW_API_KEY?.trim() ||
+    process.env.DIFY_APP_PEDAGOGY_API_KEY?.trim();
+
+  if (!apiKey || apiKey.includes("xxxxxxxx")) {
+    throw new Error(
+      "DIFY_APP_PEDAGOGY_WORKFLOW_API_KEY or DIFY_APP_PEDAGOGY_API_KEY is not set",
+    );
+  }
+
+  return { apiKey, apiBase: pedagogyApiBase() };
+}
+
+export function isPedagogyWorkflowConfigured() {
+  try {
+    getPedagogyWorkflowConfig();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Pedagogical Strategy chat — Step 3 follow-up (POST /chat-messages, streaming). */
+export function getPedagogyChatConfig() {
+  const apiKey =
+    process.env.DIFY_APP_PEDAGOGY_CHAT_API_KEY?.trim() ||
+    process.env.DIFY_APP_PEDAGOGY_API_KEY?.trim();
+  const apiBase = (
+    process.env.DIFY_APP_PEDAGOGY_CHAT_API_BASE ??
+    pedagogyApiBase()
+  ).replace(/\/$/, "");
+
+  if (!apiKey || apiKey.includes("xxxxxxxx")) {
+    throw new Error(
+      "DIFY_APP_PEDAGOGY_CHAT_API_KEY or DIFY_APP_PEDAGOGY_API_KEY is not set",
+    );
+  }
+
+  return { apiKey, apiBase };
+}
+
+export type PedagogyAppMode = "chatflow" | "workflow";
+
+/** Dify app type for Step 3 — must match the API route (chat-messages vs workflows/run). */
+export function getPedagogyAppMode(): PedagogyAppMode {
+  const raw = process.env.DIFY_APP_PEDAGOGY_APP_MODE?.trim().toLowerCase();
+  if (raw === "workflow" || raw === "chatflow") {
+    return raw;
+  }
+  return "chatflow";
+}
+
+export function getPedagogyConfigForMode(mode: PedagogyAppMode = getPedagogyAppMode()) {
+  return mode === "workflow" ? getPedagogyWorkflowConfig() : getPedagogyChatConfig();
+}
+
+export function isPedagogyChatConfigured() {
+  try {
+    getPedagogyConfigForMode();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function pedagogyIndividualApiBase() {
+  return (
+    process.env.DIFY_APP_PEDAGOGY_INDIVIDUAL_API_BASE?.trim() ||
+    pedagogyApiBase()
+  ).replace(/\/$/, "");
+}
+
+/** Step 3 — per-student individualized refine (Dify User Input: topic/scope/visual + current_* + learner_profile). */
+export function getPedagogyIndividualRefineConfig() {
+  const apiKey =
+    process.env.DIFY_APP_PEDAGOGY_INDIVIDUAL_API_KEY?.trim() ||
+    process.env.DIFY_APP_PEDAGOGY_API_KEY?.trim();
+
+  if (!apiKey || apiKey.includes("xxxxxxxx")) {
+    throw new Error(
+      "DIFY_APP_PEDAGOGY_INDIVIDUAL_API_KEY or DIFY_APP_PEDAGOGY_API_KEY is not set",
+    );
+  }
+
+  return { apiKey, apiBase: pedagogyIndividualApiBase() };
+}
+
+export function isPedagogyIndividualRefineConfigured() {
+  try {
+    getPedagogyIndividualRefineConfig();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export type PedagogyIndividualAppMode = "chatflow" | "workflow";
+
+export function getPedagogyIndividualRefineAppMode(): PedagogyIndividualAppMode {
+  const raw = process.env.DIFY_APP_PEDAGOGY_INDIVIDUAL_APP_MODE?.trim().toLowerCase();
+  if (raw === "workflow" || raw === "chatflow") {
+    return raw;
+  }
+  return "chatflow";
+}
+
+export function getPedagogyIndividualRefineConfigForMode(
+  mode: PedagogyIndividualAppMode = getPedagogyIndividualRefineAppMode(),
+) {
+  const base = getPedagogyIndividualRefineConfig();
+  return mode === "workflow" ? base : { ...base, apiBase: pedagogyIndividualApiBase() };
+}
+
 export async function difyFetch(path: string, init?: RequestInit) {
   const { apiKey, apiBase } = getDifyConfig();
   const response = await fetch(`${apiBase}${path}`, {

@@ -5,6 +5,7 @@ import { extractContentFootprint } from "@/lib/content-footprint";
 import { useWorkflowDraft } from "@/lib/use-workflow-draft";
 import {
   mergeExtractedFootprint,
+  withClearedChatFootprintFields,
   type FootprintField,
 } from "@/lib/workflow-draft";
 import { emptyLocalStudioView } from "@/lib/chat-topic-analysis";
@@ -29,10 +30,19 @@ export default function ChatStudio() {
   const [studioAnalysis, setStudioAnalysis] =
     useState<ChatStudioAnalysisState>(INITIAL_STUDIO_ANALYSIS);
   const difyFootprintEnabled = useRef(false);
+  const clearedFootprintOnEntry = useRef(false);
   const [flashed, setFlashed] = useState<Partial<Record<FootprintField, boolean>>>(
     {},
   );
   const flashTimers = useRef<Partial<Record<FootprintField, number>>>({});
+
+  useEffect(() => {
+    if (!hydrated || clearedFootprintOnEntry.current) {
+      return;
+    }
+    clearedFootprintOnEntry.current = true;
+    setDraft((current) => withClearedChatFootprintFields(current));
+  }, [hydrated, setDraft]);
 
   useEffect(() => {
     difyFootprintEnabled.current = studioAnalysis.difyConfigured;

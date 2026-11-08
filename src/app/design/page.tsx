@@ -22,10 +22,10 @@ const STEPS = [
     body: "Select class 1A–1C, whole class or a student, then add class notes.",
   },
   {
-    href: "/design/lesson",
-    title: "3. Lesson plan",
-    zh: "教案",
-    body: "Generate a structured, editable plan from the locked-in context.",
+    href: "/design/pedagogy",
+    title: "3. Pedagogical strategy",
+    zh: "教學策略",
+    body: "Review locked context, develop strategy, then generate an editable lesson plan.",
   },
   {
     href: "/design/assets",

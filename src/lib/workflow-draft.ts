@@ -24,14 +24,13 @@ export type ContentFootprint = {
   };
 };
 
-export type LearnerAudience = "whole_class" | "student";
-
 export type LearnerProfile = {
   classId: string;
-  audience: LearnerAudience;
-  studentId?: string;
+  studentIds: string[];
   senTags: SenTag[];
   classProfile: string;
+  /** Profile Synthesizer (Dify) — pedagogical constraints summary. */
+  pedagogicalSynthesis: string;
 };
 
 export type WorkflowLesson = LessonPlanFormValues & {
@@ -43,9 +42,41 @@ export type WorkflowAssets = {
   gameHtml: string;
 };
 
+/** Step 3 — Dify `part_1_udl` (class-wide UDL). */
+export type PedagogyUdlPart = {
+  educationalTheoryZh: string;
+  educationalTheoryEn: string;
+  learningStrategiesZh: string;
+  learningStrategiesEn: string;
+};
+
+/** Step 3 — one row from `part_2_individualized`. */
+export type PedagogyIndividualizedRow = {
+  studentProfile: string;
+  educationalTheoryZh: string;
+  educationalTheoryEn: string;
+  learningStrategiesZh: string;
+  learningStrategiesEn: string;
+  appliedModes: string[];
+};
+
+/** Step 3 — pedagogical strategy chat outputs. */
+export type PedagogicalStrategyState = {
+  conversationId: string;
+  /** Flattened UDL theory (zh + en) for lesson prefill / legacy. */
+  educationalTheory: string;
+  /** Class-wide UDL strategies (part_1), not per-student rows. */
+  learningStrategies: string;
+  udl: PedagogyUdlPart | null;
+  individualized: PedagogyIndividualizedRow[];
+  /** Skips re-running Dify workflow when Step 1–2 inputs are unchanged. */
+  lastInputFingerprint: string;
+};
+
 export type WorkflowDraft = {
   footprint: ContentFootprint;
   learner: LearnerProfile;
+  pedagogy: PedagogicalStrategyState;
   lesson: WorkflowLesson;
   assets: WorkflowAssets;
 };
@@ -76,15 +107,25 @@ export const DEFAULT_CONTENT_FOOTPRINT: ContentFootprint = {
 
 export const DEFAULT_LEARNER_PROFILE: LearnerProfile = {
   classId: "",
-  audience: "whole_class",
-  studentId: undefined,
+  studentIds: [],
   senTags: [],
   classProfile: "",
+  pedagogicalSynthesis: "",
+};
+
+export const DEFAULT_PEDAGOGY_STRATEGY: PedagogicalStrategyState = {
+  conversationId: "",
+  educationalTheory: "",
+  learningStrategies: "",
+  udl: null,
+  individualized: [],
+  lastInputFingerprint: "",
 };
 
 export const DEFAULT_WORKFLOW_DRAFT: WorkflowDraft = {
   footprint: DEFAULT_CONTENT_FOOTPRINT,
   learner: DEFAULT_LEARNER_PROFILE,
+  pedagogy: DEFAULT_PEDAGOGY_STRATEGY,
   lesson: {
     ...DEFAULT_LESSON_PLAN_FORM,
     markdown: "",
@@ -117,13 +158,31 @@ export type StudioContextConfirmValues = Pick<
 >;
 
 export function isLearnerReady(learner: LearnerProfile) {
-  if (!learner.classId.trim()) {
-    return false;
+  return (
+    learner.classId.trim().length > 0 && learner.studentIds.length > 0
+  );
+}
+
+export function isProfileSynthesisReady(learner: LearnerProfile) {
+  return learner.pedagogicalSynthesis.trim().length > 0;
+}
+
+/** Step 2 complete: class + students + Profile Synthesizer run. */
+export function isLearnerStepComplete(learner: LearnerProfile) {
+  return isLearnerReady(learner) && isProfileSynthesisReady(learner);
+}
+
+export function learnerAudienceLabel(
+  learner: LearnerProfile,
+  classSize: number,
+) {
+  if (learner.studentIds.length === 0) {
+    return "";
   }
-  if (learner.audience === "student") {
-    return Boolean(learner.studentId?.trim());
+  if (classSize > 0 && learner.studentIds.length === classSize) {
+    return "whole_class";
   }
-  return true;
+  return learner.studentIds.join(",");
 }
 
 export function isLessonReady(lesson: WorkflowLesson) {
@@ -175,15 +234,20 @@ export function prefillLessonFromStudio(
   findStudent: StudentLookup = () => null,
 ): WorkflowDraft {
   const tag = deriveLearnerProfileTag(draft.learner);
-  const student = findStudent(draft.learner.classId, draft.learner.studentId);
+  const selectedStudents = draft.learner.studentIds
+    .map((id) => findStudent(draft.learner.classId, id))
+    .filter((student): student is StudentRecord => student !== null);
   const topic =
     draft.lesson.topic.trim() ||
     draft.footprint.topicSummary.trim() ||
     summarizeScope(draft.footprint.scope);
   const learnerNotes = [
-    student
-      ? formatIepForWorkflow(student)
-      : `Whole class ${draft.learner.classId || ""}`.trim(),
+    draft.learner.pedagogicalSynthesis.trim()
+      ? `Pedagogical constraints (Profile Synthesizer):\n${draft.learner.pedagogicalSynthesis.trim()}`
+      : "",
+    selectedStudents.length > 0
+      ? selectedStudents.map((s) => formatIepForWorkflow(s)).join("\n\n---\n\n")
+      : `Class ${draft.learner.classId || ""}`.trim(),
     draft.learner.classProfile.trim(),
   ]
     .filter(Boolean)
@@ -194,6 +258,20 @@ export function prefillLessonFromStudio(
       : "",
     `Scope & constraints:\n${draft.footprint.scope.trim()}`,
     `Visual models:\n${draft.footprint.visualModels.trim()}`,
+    draft.pedagogy.educationalTheory.trim()
+      ? `Educational theory (Step 3):\n${draft.pedagogy.educationalTheory.trim()}`
+      : "",
+    draft.pedagogy.learningStrategies.trim()
+      ? `Learning strategies (Step 3 — UDL):\n${draft.pedagogy.learningStrategies.trim()}`
+      : "",
+    draft.pedagogy.individualized.length
+      ? `Individualized adjustments (Step 3):\n${draft.pedagogy.individualized
+          .map(
+            (row) =>
+              `- ${row.studentProfile}: ${row.appliedModes.join(", ") || "custom support"}`,
+          )
+          .join("\n")}`
+      : "",
     "Apply Bruner's Concrete–Pictorial–Abstract sequence and SpLD / AD/HD-friendly pacing.",
     "Exercise formats: decide when designing worksheets in Step 4.",
   ]
@@ -276,14 +354,85 @@ function parseLearner(raw: unknown): LearnerProfile {
           tag === "spld" || tag === "adhd" || tag === "mixed",
       )
     : [];
-  const audience: LearnerAudience =
-    raw.audience === "student" ? "student" : "whole_class";
+  let studentIds: string[] = [];
+  if (Array.isArray(raw.studentIds)) {
+    studentIds = raw.studentIds.filter(
+      (id): id is string => typeof id === "string" && id.trim().length > 0,
+    );
+  } else if (raw.audience === "student") {
+    const legacyId = asString(raw.studentId).trim();
+    if (legacyId) {
+      studentIds = [legacyId];
+    }
+  }
   return {
     classId: asString(raw.classId),
-    audience,
-    studentId: asString(raw.studentId) || undefined,
+    studentIds,
     senTags,
     classProfile: asString(raw.classProfile),
+    pedagogicalSynthesis: asString(raw.pedagogicalSynthesis),
+  };
+}
+
+function parsePedagogyUdl(raw: unknown): PedagogyUdlPart | null {
+  if (!isRecord(raw)) {
+    return null;
+  }
+  const part: PedagogyUdlPart = {
+    educationalTheoryZh: asString(raw.educationalTheoryZh),
+    educationalTheoryEn: asString(raw.educationalTheoryEn),
+    learningStrategiesZh: asString(raw.learningStrategiesZh),
+    learningStrategiesEn: asString(raw.learningStrategiesEn),
+  };
+  const hasContent = Object.values(part).some((value) => value.trim().length > 0);
+  return hasContent ? part : null;
+}
+
+function parsePedagogyIndividualized(raw: unknown): PedagogyIndividualizedRow[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw
+    .map((item): PedagogyIndividualizedRow | null => {
+      if (!isRecord(item)) {
+        return null;
+      }
+      const appliedModes = Array.isArray(item.appliedModes)
+        ? item.appliedModes.filter(
+            (mode): mode is string =>
+              typeof mode === "string" && mode.trim().length > 0,
+          )
+        : [];
+      const row: PedagogyIndividualizedRow = {
+        studentProfile: asString(item.studentProfile),
+        educationalTheoryZh: asString(item.educationalTheoryZh),
+        educationalTheoryEn: asString(item.educationalTheoryEn),
+        learningStrategiesZh: asString(item.learningStrategiesZh),
+        learningStrategiesEn: asString(item.learningStrategiesEn),
+        appliedModes,
+      };
+      const hasContent =
+        row.studentProfile.trim().length > 0 ||
+        Object.values(row).some(
+          (value) =>
+            typeof value === "string" && value.trim().length > 0,
+        );
+      return hasContent ? row : null;
+    })
+    .filter((row): row is PedagogyIndividualizedRow => row !== null);
+}
+
+function parsePedagogy(raw: unknown): PedagogicalStrategyState {
+  if (!isRecord(raw)) {
+    return DEFAULT_PEDAGOGY_STRATEGY;
+  }
+  return {
+    conversationId: asString(raw.conversationId),
+    educationalTheory: asString(raw.educationalTheory),
+    learningStrategies: asString(raw.learningStrategies),
+    udl: parsePedagogyUdl(raw.udl),
+    individualized: parsePedagogyIndividualized(raw.individualized),
+    lastInputFingerprint: asString(raw.lastInputFingerprint),
   };
 }
 
@@ -312,6 +461,7 @@ export function parseWorkflowDraft(raw: unknown): WorkflowDraft {
   return {
     footprint: parseFootprint(raw.footprint),
     learner: parseLearner(raw.learner),
+    pedagogy: parsePedagogy(raw.pedagogy),
     lesson: parseLesson(raw.lesson),
     assets: {
       worksheetMarkdown: asString(assets.worksheetMarkdown),
@@ -348,6 +498,23 @@ export function saveWorkflowDraft(draft: WorkflowDraft) {
     requirements: draft.lesson.requirements,
   };
   sessionStorage.setItem(LESSON_PLAN_DRAFT_KEY, JSON.stringify(lessonForm));
+}
+
+/** Empty scope / visual models when opening Step 1 chat (topic summary unchanged). */
+export function withClearedChatFootprintFields(draft: WorkflowDraft): WorkflowDraft {
+  return {
+    ...draft,
+    footprint: {
+      ...draft.footprint,
+      scope: "",
+      visualModels: "",
+      edited: {
+        ...draft.footprint.edited,
+        scope: false,
+        visualModels: false,
+      },
+    },
+  };
 }
 
 export function mergeExtractedFootprint(

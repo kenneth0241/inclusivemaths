@@ -164,7 +164,11 @@ export default function FootprintFieldInfo({ field }: FootprintFieldInfoProps) {
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label="欄位說明 · Field guidance"
-        onClick={() => setOpen(true)}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setOpen(true);
+        }}
       >
         <InfoIcon />
       </button>

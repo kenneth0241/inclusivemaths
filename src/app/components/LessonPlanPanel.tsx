@@ -15,7 +15,10 @@ import {
 import { buildLocalLessonPlan } from "@/lib/lesson-template";
 import { useStudentRoster } from "@/lib/use-student-roster";
 import { useWorkflowDraft } from "@/lib/use-workflow-draft";
-import { deriveLearnerProfileTag } from "@/lib/workflow-draft";
+import {
+  deriveLearnerProfileTag,
+  learnerAudienceLabel,
+} from "@/lib/workflow-draft";
 import EnvConfigBanner from "./EnvConfigBanner";
 import LessonPlanForm from "./LessonPlanForm";
 import LessonPlanResult from "./LessonPlanResult";
@@ -124,12 +127,13 @@ async function consumeLessonPlanStream(
 
 function extrasFromDraft(
   draft: ReturnType<typeof useWorkflowDraft>["draft"],
+  classSize: number,
 ): LessonPlanDifyExtras {
   return {
     contentScope: draft.footprint.scope,
     visualModels: draft.footprint.visualModels,
     classId: draft.learner.classId,
-    audience: draft.learner.audience,
+    audience: learnerAudienceLabel(draft.learner, classSize),
     learnerProfileTag: deriveLearnerProfileTag(draft.learner),
     classProfile: draft.learner.classProfile,
   };
@@ -137,7 +141,10 @@ function extrasFromDraft(
 
 export default function LessonPlanPanel() {
   const { draft, setDraft, hydrated } = useWorkflowDraft();
-  const { findStudent } = useStudentRoster();
+  const { findStudent, classes } = useStudentRoster();
+  const learnerClassSize =
+    classes.find((item) => item.id === draft.learner.classId)?.students
+      .length ?? 0;
   const formValues: LessonPlanFormValues = {
     topic: draft.lesson.topic,
     classFocus: draft.lesson.classFocus,
@@ -258,7 +265,7 @@ export default function LessonPlanPanel() {
         body: JSON.stringify({
           mode,
           ...formValues,
-          ...extrasFromDraft(draft),
+          ...extrasFromDraft(draft, learnerClassSize),
           previousPlan: previousPlanForRequest,
           refinement: mode === "refine" ? refinement : undefined,
           conversation_id:

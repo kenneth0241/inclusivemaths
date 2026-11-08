@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { BilingualStack } from "./components/Bilingual";
-import { CorpusStatusSection } from "./components/CorpusStatusSection";
 
 const STEPS = [
   {
@@ -17,9 +16,9 @@ const STEPS = [
   },
   {
     step: "3",
-    title: "Lesson plan",
-    zh: "教案",
-    body: "Generate a CPA-informed plan from the content footprint and learner profile.",
+    title: "Pedagogical strategy",
+    zh: "教學策略",
+    body: "Review Steps 1–2, develop your strategy, then generate a CPA-informed lesson plan.",
   },
   {
     step: "4",
@@ -104,13 +103,6 @@ export default function Home() {
               </li>
             ))}
           </ol>
-        </section>
-
-        <section className="mt-16 w-full">
-          <h2 className="mb-6 text-center text-2xl font-semibold text-zinc-900">
-            Textbook knowledge
-          </h2>
-          <CorpusStatusSection />
         </section>
 
         <p className="mt-16 max-w-layout-prose text-center text-sm leading-6 text-zinc-500">

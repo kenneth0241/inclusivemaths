@@ -74,11 +74,15 @@ export function buildLocalLessonPlan(
   findStudent: StudentLookup = () => null,
 ) {
   const tag = deriveLearnerProfileTag(draft.learner);
-  const student = findStudent(draft.learner.classId, draft.learner.studentId);
+  const selected = draft.learner.studentIds
+    .map((id) => findStudent(draft.learner.classId, id))
+    .filter((student) => student !== null);
   const audience =
-    draft.learner.audience === "student" && student
-      ? student.name
-      : `Class ${draft.learner.classId || "1"} · whole class`;
+    selected.length === 1
+      ? selected[0]!.name
+      : selected.length > 1
+        ? `Class ${draft.learner.classId || "1"} · ${selected.length} students`
+        : `Class ${draft.learner.classId || "1"}`;
   const topic = draft.lesson.topic.trim() || "Primary 1 maths";
   const duration = draft.lesson.durationMinutes || "40";
   const scope = draft.footprint.scope.trim() || topic;

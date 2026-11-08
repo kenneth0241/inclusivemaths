@@ -1,0 +1,83 @@
+"use client";
+
+import type { ProfileAnalysisSection } from "@/lib/profile-synthesizer";
+import { PROFILE_SYNTHESIS_SECTION_TITLES } from "@/lib/profile-synthesizer";
+import { BilingualStack } from "./Bilingual";
+import MarkdownRichText from "./MarkdownRichText";
+
+type ProfileSynthesisSectionListProps = {
+  sections: ProfileAnalysisSection[];
+  onEditSection: (sectionNumber: number) => void;
+  className?: string;
+};
+
+export default function ProfileSynthesisSectionList({
+  sections,
+  onEditSection,
+  className = "",
+}: ProfileSynthesisSectionListProps) {
+  return (
+    <div className={`space-y-3 ${className}`.trim()}>
+      {sections.map((section) => {
+        const fixedTitle = PROFILE_SYNTHESIS_SECTION_TITLES[section.number];
+
+        return (
+          <article
+            key={section.number}
+            className="rounded-xl border border-teal-100/90 bg-white/90 p-4 shadow-sm ring-1 ring-zinc-100/80"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 flex-1 items-start gap-3">
+                <span
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-teal-700 text-sm font-bold text-white tabular-nums"
+                  aria-hidden
+                >
+                  {section.number}
+                </span>
+                <div className="min-w-0 flex-1">
+                  {fixedTitle ? (
+                    <h4 className="text-sm font-semibold leading-snug text-zinc-900">
+                      <BilingualStack
+                        zh={fixedTitle.zh}
+                        en={fixedTitle.en}
+                        layout="stack"
+                        zhClassName="text-sm font-semibold text-zinc-900"
+                        enClassName="text-xs font-medium text-zinc-500"
+                      />
+                    </h4>
+                  ) : null}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onEditSection(section.number)}
+                className="shrink-0 rounded-lg bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-900 ring-1 ring-teal-200 hover:bg-teal-100"
+              >
+                <BilingualStack
+                  layout="inline"
+                  zh="編輯"
+                  en="Edit"
+                  enClassName="text-teal-800/80"
+                />
+              </button>
+            </div>
+            {section.body.trim() ? (
+              <div className="mt-3 border-t border-zinc-100 pt-3 pl-11">
+                <MarkdownRichText content={section.body} />
+              </div>
+            ) : (
+              <p className="mt-3 border-t border-zinc-100 pt-3 pl-11 text-sm text-zinc-400">
+                <BilingualStack
+                  layout="stack"
+                  zh="（此節尚無內容 — 可按「編輯」新增）"
+                  en="(No content yet — use Edit to add text.)"
+                  enClassName="text-zinc-400"
+                />
+              </p>
+            )}
+          </article>
+        );
+      })}
+    </div>
+  );
+}

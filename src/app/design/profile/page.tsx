@@ -16,7 +16,8 @@ export default function LearnerProfilePage() {
       kicker="Step 2 · 學習者檔案"
       title="Who is this lesson for?"
       description="Choose a class, then whole class or a specific student. Your notes become a routing tag and context for the lesson workflow."
-      proceedLabel="Proceed to lesson plan"
+      proceedLabel="前往教學策略"
+      proceedLabelEn="Proceed to pedagogical strategy"
     >
       <LearnerProfileStudio />
     </WorkflowShell>

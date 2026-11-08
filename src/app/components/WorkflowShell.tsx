@@ -14,6 +14,8 @@ import {
 import {
   isFootprintReady,
   isLearnerReady,
+  isLearnerStepComplete,
+  isProfileSynthesisReady,
   isLessonReady,
   applyConfirmedStudioContext,
   prefillLessonFromStudio,
@@ -32,7 +34,12 @@ const STEPS: {
 }[] = [
   { id: 1, href: "/chat", en: "Textbook chat", zh: "課本對話" },
   { id: 2, href: "/design/profile", en: "Learner profile", zh: "學習者檔案" },
-  { id: 3, href: "/design/lesson", en: "Lesson plan", zh: "教案" },
+  {
+    id: 3,
+    href: "/design/pedagogy",
+    en: "Pedagogical strategy",
+    zh: "教學策略",
+  },
   { id: 4, href: "/design/assets", en: "Assets", zh: "教材" },
 ];
 
@@ -45,6 +52,8 @@ type WorkflowShellProps = {
   titleEn?: string;
   description?: string;
   descriptionEn?: string;
+  /** Rendered directly under the page title (e.g. executive summary trigger). */
+  belowTitle?: ReactNode;
   children: ReactNode;
   wide?: boolean;
   proceedLabel?: string;
@@ -86,6 +95,7 @@ function WorkflowShellInner({
   titleEn,
   description,
   descriptionEn,
+  belowTitle,
   children,
   wide = false,
   proceedLabel,
@@ -111,9 +121,14 @@ function WorkflowShellInner({
   );
   const flags = {
     footprint: isFootprintReady(draft.footprint),
-    learner: isLearnerReady(draft.learner),
+    learner: isLearnerStepComplete(draft.learner),
     lesson: isLessonReady(draft.lesson),
   };
+  const learnerPickedNotAnalyzed =
+    hydrated &&
+    step === 2 &&
+    isLearnerReady(draft.learner) &&
+    !isProfileSynthesisReady(draft.learner);
   const nextStep = STEPS.find((item) => item.id === step + 1);
   const prevStep = STEPS.find((item) => item.id === step - 1);
   const canProceed = nextStep
@@ -244,6 +259,9 @@ function WorkflowShellInner({
             title
           )}
         </h1>
+        {belowTitle ? (
+          <div className="mb-2 w-full">{belowTitle}</div>
+        ) : null}
         {description ? (
           <p className="mx-auto mt-3 mb-8 max-w-layout-prose text-center text-base leading-7 text-zinc-600">
             {descriptionEn ? (
@@ -259,6 +277,20 @@ function WorkflowShellInner({
           </p>
         ) : null}
         {children}
+
+        {learnerPickedNotAnalyzed ? (
+          <div
+            className="mt-8 w-full rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 ring-1 ring-amber-100"
+            role="status"
+          >
+            <BilingualStack
+              layout="stack"
+              zh="請在右側「Profile Synthesizer」按「執行分析」，整合 Step 1 與學生 IEP 後，才可前往教學策略。"
+              en="Run Analysis in the Profile Synthesizer panel (right) before proceeding to the pedagogical strategy step."
+              enClassName="text-amber-900/85"
+            />
+          </div>
+        ) : null}
 
         <div className="no-print mt-8 flex w-full flex-wrap items-center justify-between gap-3">
           {prevStep ? (

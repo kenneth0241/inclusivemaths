@@ -7,10 +7,15 @@ import {
   EMPTY_IEP_DOMAINS,
   isSenStudent,
   normalizeStudentForSave,
+  senTypeShortLabel,
   type StudentRecord,
 } from "@/lib/student-record";
 import { useStudentRoster } from "@/lib/use-student-roster";
 import { BilingualStack } from "./Bilingual";
+import {
+  StudentRecordEditDialog,
+  StudentRecordViewDialog,
+} from "./StudentRecordDialog";
 
 function blankStudent(classId: string): StudentRecord {
   return {
@@ -31,6 +36,7 @@ export default function StudentRosterManager() {
     return ["all", ...[...ids].sort()];
   }, [students]);
   const [classFilter, setClassFilter] = useState<string>("all");
+  const [viewStudent, setViewStudent] = useState<StudentRecord | null>(null);
   const [editing, setEditing] = useState<StudentRecord | null>(null);
   const [editingOriginalId, setEditingOriginalId] = useState<string | null>(
     null,
@@ -46,23 +52,47 @@ export default function StudentRosterManager() {
       classFilter === "all"
         ? students
         : students.filter((s) => s.class === classFilter);
-    return [...list].sort((a, b) => a.id.localeCompare(b.id));
+    return [...list].sort(
+      (a, b) =>
+        a.class.localeCompare(b.class) ||
+        a.id.localeCompare(b.id, undefined, { numeric: true }),
+    );
   }, [students, classFilter]);
+
+  function closeEditModal() {
+    setEditing(null);
+    setEditingOriginalId(null);
+    setEditingOriginalClass(null);
+    setSaveError("");
+  }
 
   function openNew() {
     const defaultClass =
       classFilter !== "all" ? classFilter : (students[0]?.class ?? "1A");
+    setViewStudent(null);
     setEditing(blankStudent(defaultClass));
     setEditingOriginalId(null);
     setEditingOriginalClass(null);
     setSaveError("");
   }
 
+  function openView(student: StudentRecord) {
+    setViewStudent(cloneStudent(student));
+  }
+
   function openEdit(student: StudentRecord) {
+    setViewStudent(null);
     setEditing(cloneStudent(student));
     setEditingOriginalId(student.id);
     setEditingOriginalClass(student.class);
     setSaveError("");
+  }
+
+  function editFromView() {
+    if (!viewStudent) {
+      return;
+    }
+    openEdit(viewStudent);
   }
 
   function patchEditing(patch: Partial<StudentRecord>) {
@@ -113,9 +143,13 @@ export default function StudentRosterManager() {
         editing?.id === student.id &&
         editing.class === student.class
       ) {
-        setEditing(null);
-        setEditingOriginalId(null);
-        setEditingOriginalClass(null);
+        closeEditModal();
+      }
+      if (
+        viewStudent?.id === student.id &&
+        viewStudent.class === student.class
+      ) {
+        setViewStudent(null);
       }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Remove failed.");
@@ -156,9 +190,7 @@ export default function StudentRosterManager() {
       }
       const next = [...withoutEdited, normalized];
       await saveAll(next);
-      setEditing(null);
-      setEditingOriginalId(null);
-      setEditingOriginalClass(null);
+      closeEditModal();
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Save failed.");
     } finally {
@@ -169,21 +201,28 @@ export default function StudentRosterManager() {
   return (
     <div className="w-full space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="text-sm text-zinc-600">
-            Class
-            <select
-              value={classFilter}
-              onChange={(event) => setClassFilter(event.target.value)}
-              className="ml-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm"
-            >
-              {classFilterOptions.map((id) => (
-                <option key={id} value={id}>
-                  {id === "all" ? "All classes" : id}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium text-zinc-600">Class</span>
+          <div className="flex flex-wrap gap-2">
+            {classFilterOptions.map((id) => {
+              const active = classFilter === id;
+              const label = id === "all" ? "All" : id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setClassFilter(id)}
+                  className={`rounded-full px-3 py-1.5 text-sm font-semibold ring-1 transition ${
+                    active
+                      ? "bg-teal-ink text-white ring-teal-ink"
+                      : "bg-white text-zinc-800 ring-zinc-200 hover:ring-teal-300"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
           <button
             type="button"
             onClick={() => void refresh()}
@@ -204,7 +243,9 @@ export default function StudentRosterManager() {
       {loading ? (
         <p className="text-sm text-zinc-500">Loading…</p>
       ) : error ? (
-        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
+        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">
+          {error}
+        </p>
       ) : (
         <div className="overflow-hidden rounded-3xl bg-white ring-1 ring-teal-100">
           <table className="w-full text-left text-sm">
@@ -224,12 +265,21 @@ export default function StudentRosterManager() {
                   className="border-t border-zinc-100"
                 >
                   <td className="px-4 py-3 font-mono text-xs">{student.id}</td>
-                  <td className="px-4 py-3">{student.name}</td>
+                  <td
+                    className="cursor-pointer px-4 py-3 text-zinc-900 hover:text-teal-800"
+                    title="Click to view profile"
+                    onClick={() => openView(student)}
+                  >
+                    {student.name}
+                  </td>
                   <td className="px-4 py-3">{student.class}</td>
                   <td className="px-4 py-3">
                     {isSenStudent(student) ? (
-                      <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs text-sky-lock ring-1 ring-sky-100">
-                        IEP
+                      <span
+                        className="inline-block max-w-[11rem] truncate rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-lock ring-1 ring-sky-100"
+                        title={student.sen_type ?? ""}
+                      >
+                        {senTypeShortLabel(student.sen_type) ?? "SEN"}
                       </span>
                     ) : (
                       <span className="text-zinc-400">—</span>
@@ -269,195 +319,21 @@ export default function StudentRosterManager() {
         </p>
       ) : null}
 
-      {editing ? (
-        <form
-          onSubmit={(event) => void submitEdit(event)}
-          className="space-y-4 rounded-3xl bg-white p-6 ring-1 ring-teal-100"
-        >
-          <h2 className="text-lg font-semibold text-zinc-900">
-            {editingOriginalId ? "Edit student" : "New student"}
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <label className="block text-sm">
-              <span className="font-medium text-zinc-700">ID</span>
-              <input
-                required
-                value={editing.id}
-                onChange={(e) => patchEditing({ id: e.target.value })}
-                placeholder="11"
-                className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2"
-              />
-            </label>
-            <label className="block text-sm sm:col-span-2">
-              <span className="font-medium text-zinc-700">Name</span>
-              <input
-                required
-                value={editing.name}
-                onChange={(e) => patchEditing({ name: e.target.value })}
-                className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium text-zinc-700">Class</span>
-              <input
-                required
-                value={editing.class}
-                onChange={(e) => patchEditing({ class: e.target.value })}
-                className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2"
-              />
-            </label>
-          </div>
-
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={isSenStudent(editing)}
-              onChange={(e) => setSenEnabled(e.target.checked)}
-            />
-            <span>SEN student (Individual Education Plan)</span>
-          </label>
-
-          {isSenStudent(editing) ? (
-            <div className="space-y-4 border-t border-zinc-100 pt-4">
-              <label className="block text-sm">
-                <span className="font-medium text-zinc-700">sen_type</span>
-                <input
-                  required
-                  value={editing.sen_type ?? ""}
-                  onChange={(e) => patchEditing({ sen_type: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2"
-                />
-              </label>
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block text-sm">
-                  <span className="font-medium text-zinc-700">
-                    strengths_and_interests
-                  </span>
-                  <textarea
-                    required
-                    rows={3}
-                    value={
-                      editing.current_performance?.strengths_and_interests ?? ""
-                    }
-                    onChange={(e) =>
-                      patchEditing({
-                        current_performance: {
-                          ...(editing.current_performance ??
-                            EMPTY_CURRENT_PERFORMANCE),
-                          strengths_and_interests: e.target.value,
-                        },
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2"
-                  />
-                </label>
-                <label className="block text-sm">
-                  <span className="font-medium text-zinc-700">weaknesses</span>
-                  <textarea
-                    required
-                    rows={3}
-                    value={editing.current_performance?.weaknesses ?? ""}
-                    onChange={(e) =>
-                      patchEditing({
-                        current_performance: {
-                          ...(editing.current_performance ??
-                            EMPTY_CURRENT_PERFORMANCE),
-                          weaknesses: e.target.value,
-                        },
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2"
-                  />
-                </label>
-              </div>
-              {(
-                [
-                  ["learning_adjustment", "Learning adjustment"] as const,
-                  [
-                    "social_behavioral_adjustment",
-                    "Social / behavioural adjustment",
-                  ] as const,
-                ] as const
-              ).map(([key, label]) => (
-                <fieldset
-                  key={key}
-                  className="rounded-2xl bg-zinc-50 p-4 ring-1 ring-zinc-100"
-                >
-                  <legend className="px-1 text-sm font-semibold text-zinc-800">
-                    {label}
-                  </legend>
-                  <label className="mt-2 block text-sm">
-                    tier_1_support
-                    <textarea
-                      required
-                      rows={2}
-                      value={
-                        editing.domains?.[key].tier_1_support ?? ""
-                      }
-                      onChange={(e) =>
-                        patchEditing({
-                          domains: {
-                            ...(editing.domains ?? EMPTY_IEP_DOMAINS),
-                            [key]: {
-                              ...(editing.domains?.[key] ?? {
-                                tier_1_support: "",
-                                tier_2_and_3_support: "",
-                              }),
-                              tier_1_support: e.target.value,
-                            },
-                          },
-                        })
-                      }
-                      className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2"
-                    />
-                  </label>
-                  <label className="mt-2 block text-sm">
-                    tier_2_and_3_support
-                    <textarea
-                      rows={2}
-                      value={
-                        editing.domains?.[key].tier_2_and_3_support ?? ""
-                      }
-                      onChange={(e) =>
-                        patchEditing({
-                          domains: {
-                            ...(editing.domains ?? EMPTY_IEP_DOMAINS),
-                            [key]: {
-                              ...(editing.domains?.[key] ?? {
-                                tier_1_support: "",
-                                tier_2_and_3_support: "",
-                              }),
-                              tier_2_and_3_support: e.target.value,
-                            },
-                          },
-                        })
-                      }
-                      className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2"
-                    />
-                  </label>
-                </fieldset>
-              ))}
-            </div>
-          ) : null}
-
-          <div className="flex flex-wrap justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setEditing(null)}
-              className="rounded-full px-4 py-2 text-sm ring-1 ring-zinc-200"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saveBusy}
-              className="rounded-full bg-teal-ink px-4 py-2 text-sm font-semibold text-white disabled:bg-zinc-300"
-            >
-              {saveBusy ? "Saving…" : "Save to JSON"}
-            </button>
-          </div>
-        </form>
-      ) : null}
+      <StudentRecordViewDialog
+        student={viewStudent}
+        onClose={() => setViewStudent(null)}
+        onEdit={editFromView}
+      />
+      <StudentRecordEditDialog
+        editing={editing}
+        isNew={!editingOriginalId}
+        saveBusy={saveBusy}
+        saveError={saveError}
+        onClose={closeEditModal}
+        onSubmit={(event) => void submitEdit(event)}
+        patchEditing={patchEditing}
+        setSenEnabled={setSenEnabled}
+      />
 
       <p className="text-xs text-zinc-500">
         File: <code className="font-mono">data/students.json</code> · Changes
