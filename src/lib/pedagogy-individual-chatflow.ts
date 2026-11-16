@@ -1,6 +1,7 @@
 import {
   parsePedagogyWorkflowOutputs,
   pedagogyStructuredResultReady,
+  resolvePedagogyRefineChatReply,
   toPedagogyStructuredPayload,
   tryParsePedagogyStructuredAnswerText,
 } from "@/lib/pedagogy-strategy";
@@ -42,7 +43,9 @@ function shouldSuppressStructuredAnswerStream(text: string): boolean {
   if (
     trimmed.includes('"chat_reply"') ||
     trimmed.includes('"part_1_udl"') ||
-    trimmed.includes('"part_2_individualized"')
+    trimmed.includes('"part_2_individualized"') ||
+    trimmed.includes('"educational_theory_zh"') ||
+    trimmed.includes('"learning_strategies_zh"')
   ) {
     return true;
   }
@@ -134,7 +137,7 @@ export function createPedagogyIndividualChatflowTransform(
             return;
           }
           const structured = toPedagogyStructuredPayload(parsed);
-          const chatReply = parsed.chatReply.trim();
+          const chatReply = resolvePedagogyRefineChatReply(parsed);
 
           if (chatReply) {
             controller.enqueue(sseDataLine({ event: "message", answer: chatReply }));
@@ -217,7 +220,7 @@ export function createPedagogyIndividualChatflowTransform(
           const parsed = parsePedagogyWorkflowOutputs(fromText);
           if (pedagogyStructuredResultReady(parsed)) {
             const structured = toPedagogyStructuredPayload(parsed);
-            const chatReply = parsed.chatReply.trim();
+            const chatReply = resolvePedagogyRefineChatReply(parsed);
             if (chatReply) {
               controller.enqueue(
                 sseDataLine({ event: "message", answer: chatReply }),

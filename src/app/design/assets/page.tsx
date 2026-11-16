@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import AssetHub from "../../components/AssetHub";
+import GameMaterialsStudio from "../../components/GameMaterialsStudio";
 import WorkflowShell from "../../components/WorkflowShell";
 
 export const metadata: Metadata = {
@@ -14,10 +14,10 @@ export default function AssetsPage() {
       step={4}
       wide
       kicker="Step 4 · 教材"
-      title="Worksheets and games"
-      description="Use the finalized lesson plan as the source. Preview a spaced worksheet (print to PDF) and a self-contained HTML5 game."
+      title="HTML practice games"
+      description="Set game parameters and chat to generate offline HTML5 games. Steps 1–3 stay on the right for full context."
     >
-      <AssetHub />
+      <GameMaterialsStudio />
     </WorkflowShell>
   );
 }

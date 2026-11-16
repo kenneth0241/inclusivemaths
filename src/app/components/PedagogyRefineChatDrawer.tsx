@@ -10,7 +10,9 @@ import {
   formatPedagogyRefineAssistantContent,
   formatStudentRefineSeedMarkdown,
   formatUdlRefineSeedMarkdown,
-  PEDAGOGY_STUDENT_REFINE_OPENING_QUERY,
+  parsePedagogyWorkflowOutputs,
+  pedagogyStructuredResultReady,
+  resolvePedagogyRefineChatReply,
   pedagogyThreadKey,
   isUnparsedPedagogyStructuredJson,
   looksLikePedagogyStructuredJsonAnswer,
@@ -70,6 +72,43 @@ type PedagogyRefineChatDrawerProps = {
 const CONTEXT_USER_QUERY =
   "請根據以上 Step 1–2 內容執行教學策略分析。\nRun pedagogical strategy analysis from the Step 1–2 context above.";
 
+function buildStepsContextMessage(
+  stepsContextMarkdown: string,
+): ChatMessage {
+  return {
+    id: `ctx-${Date.now()}`,
+    role: "user",
+    kind: "steps-context",
+    content: stepsContextMarkdown.trim()
+      ? `${stepsContextMarkdown.trim()}\n\n---\n\n${CONTEXT_USER_QUERY}`
+      : CONTEXT_USER_QUERY,
+  };
+}
+
+function ensureStepsContextBanner(
+  messages: ChatMessage[],
+  stepsContextMarkdown: string,
+): ChatMessage[] {
+  if (!stepsContextMarkdown.trim()) {
+    return messages;
+  }
+  const withoutContext = messages.filter(
+    (message) => message.kind !== "steps-context",
+  );
+  return [buildStepsContextMessage(stepsContextMarkdown), ...withoutContext];
+}
+
+function prepareRestoredMessages(
+  restored: ChatMessage[],
+  scope: PedagogyRefineScope,
+  stepsContextMarkdown: string,
+): ChatMessage[] {
+  if (scope === "student") {
+    return restored.filter((message) => message.kind !== "steps-context");
+  }
+  return ensureStepsContextBanner(restored, stepsContextMarkdown);
+}
+
 export default function PedagogyRefineChatDrawer({
   open,
   scope,
@@ -109,7 +148,10 @@ export default function PedagogyRefineChatDrawer({
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const initGeneration = useRef(0);
-  const studentOpeningSentFor = useRef<string | null>(null);
+  const threadHydratedKey = useRef<string | null>(null);
+  const submitGenerationRef = useRef(0);
+  const individualizedRowRef = useRef(individualizedRow);
+  individualizedRowRef.current = individualizedRow;
   const [deployHint, setDeployHint] = useState<"local" | "vercel">("local");
 
   useEffect(() => {
@@ -122,8 +164,13 @@ export default function PedagogyRefineChatDrawer({
 
   useEffect(() => {
     if (!open) {
+      threadHydratedKey.current = null;
       return;
     }
+    if (threadHydratedKey.current === threadKey) {
+      return;
+    }
+    threadHydratedKey.current = threadKey;
     const generation = ++initGeneration.current;
     setError("");
 
@@ -146,35 +193,30 @@ export default function PedagogyRefineChatDrawer({
     }
 
     if (restored.length > 0) {
-      setMessages(restored);
+      setMessages(prepareRestoredMessages(restored, scope, stepsContextMarkdown));
       setTimeout(() => inputRef.current?.focus(), 200);
       return;
     }
 
-    const contextMessage: ChatMessage = {
-      id: `ctx-${Date.now()}`,
-      role: "user",
-      kind: "steps-context",
-      content: stepsContextMarkdown.trim()
-        ? `${stepsContextMarkdown.trim()}\n\n---\n\n${CONTEXT_USER_QUERY}`
-        : CONTEXT_USER_QUERY,
+    const contextMessage = buildStepsContextMessage(stepsContextMarkdown);
+    const seedMessage: ChatMessage = {
+      id: `seed-${Date.now()}`,
+      role: "assistant",
+      kind: "analysis",
+      content: seedAnalysisMarkdown.trim(),
     };
 
     if (seedAnalysisMarkdown.trim()) {
-      setMessages([
-        contextMessage,
-        {
-          id: `seed-${Date.now()}`,
-          role: "assistant",
-          kind: "analysis",
-          content: seedAnalysisMarkdown.trim(),
-        },
-      ]);
+      setMessages(
+        scope === "student"
+          ? [seedMessage]
+          : [contextMessage, seedMessage],
+      );
       setTimeout(() => inputRef.current?.focus(), 200);
       return;
     }
 
-    setMessages([contextMessage]);
+    setMessages(scope === "student" ? [] : [contextMessage]);
 
     if (!needsInitialAnalysis || !workflowConfigured || disabled) {
       setTimeout(() => inputRef.current?.focus(), 200);
@@ -184,8 +226,15 @@ export default function PedagogyRefineChatDrawer({
     void (async () => {
       setBusy(true);
       const assistantId = `assistant-baseline-${Date.now()}`;
+      const baselineSeed: ChatMessage[] =
+        scope === "student"
+          ? []
+          : [buildStepsContextMessage(stepsContextMarkdown)];
       setMessages((current) => [
         ...current,
+        ...baselineSeed.filter(
+          (seed) => !current.some((message) => message.kind === "steps-context"),
+        ),
         { id: assistantId, role: "assistant", kind: "analysis", content: "" },
       ]);
       setStreamingAssistantId(assistantId);
@@ -200,6 +249,7 @@ export default function PedagogyRefineChatDrawer({
             studentIds: learner.studentIds,
             classProfile: learner.classProfile,
             pedagogicalSynthesis: learner.pedagogicalSynthesis,
+            profileSynthesisStructured: learner.profileSynthesisStructured,
           }),
         });
 
@@ -296,8 +346,12 @@ export default function PedagogyRefineChatDrawer({
     if (!open || messages.length === 0) {
       return;
     }
-    sessionStorage.setItem(messagesKey, JSON.stringify(messages));
-  }, [messages, open, messagesKey]);
+    const toStore =
+      scope === "student"
+        ? messages.filter((message) => message.kind !== "steps-context")
+        : messages;
+    sessionStorage.setItem(messagesKey, JSON.stringify(toStore));
+  }, [messages, open, messagesKey, scope]);
 
   useEffect(() => {
     if (!open || scope !== "student") {
@@ -333,7 +387,8 @@ export default function PedagogyRefineChatDrawer({
       return;
     }
 
-    if (scope === "student" && !individualizedRow) {
+    const activeIndividualRow = individualizedRowRef.current;
+    if (scope === "student" && !activeIndividualRow) {
       setError("Missing individualized strategy row for this student.");
       return;
     }
@@ -354,6 +409,7 @@ export default function PedagogyRefineChatDrawer({
     setBusy(true);
     setStreamingAssistantId(assistantId);
     setError("");
+    const submitGeneration = ++submitGenerationRef.current;
 
     let assistantText = "";
     let structuredHandled = false;
@@ -364,8 +420,7 @@ export default function PedagogyRefineChatDrawer({
       if (!parsed) {
         return false;
       }
-      const chatReply =
-        parsed.chatReply.trim() || formatPedagogyChatMarkdown(parsed);
+      const chatReply = resolvePedagogyRefineChatReply(parsed);
       if (!chatReply.trim() && parsed.individualized.length === 0 && !parsed.udl) {
         return false;
       }
@@ -417,8 +472,8 @@ export default function PedagogyRefineChatDrawer({
     };
 
     const applyFromWorkflowOutputs = (outputs: Record<string, unknown>) => {
-      const parsed = tryParsePedagogyWorkflowOutputs(outputs);
-      if (!parsed) {
+      const parsed = parsePedagogyWorkflowOutputs(outputs);
+      if (!pedagogyStructuredResultReady(parsed)) {
         const rawText = ["text", "answer", "output", "result"]
           .map((key) => outputs[key])
           .find((value) => typeof value === "string" && value.trim());
@@ -432,6 +487,13 @@ export default function PedagogyRefineChatDrawer({
       return applyStructuredAssistantResult(parsed);
     };
 
+    const chatTranscript = [
+      ...messages.filter(
+        (message) => message.kind === "chat" && message.content.trim(),
+      ),
+      userMessage,
+    ].map(({ role, content }) => ({ role, content }));
+
     try {
       const response = await fetch("/api/pedagogy-chat", {
         method: "POST",
@@ -444,18 +506,31 @@ export default function PedagogyRefineChatDrawer({
           student_id: studentId,
           student_profile: studentProfile,
           individualized_row:
-            scope === "student" ? individualizedRow : undefined,
-          transcript: messages
-            .filter((message) => message.content.trim())
-            .map(({ role, content }) => ({ role, content })),
+            scope === "student" ? activeIndividualRow : undefined,
+          transcript: chatTranscript,
           footprint,
           learner,
         }),
       });
 
       if (!response.ok) {
-        const body = (await response.json()) as { error?: string };
-        throw new Error(body.error || "Chat request failed.");
+        const body = (await response.json()) as {
+          error?: string;
+          difyDebug?: {
+            requestUrl?: string;
+            status?: number;
+            bodyPreview?: string;
+          };
+        };
+        let detail = body.error || "Chat request failed.";
+        const debug = body.difyDebug;
+        if (debug?.requestUrl) {
+          detail += `\n\nDify URL: ${debug.requestUrl} (HTTP ${debug.status ?? "?"})`;
+        }
+        if (debug?.bodyPreview) {
+          detail += `\nResponse: ${debug.bodyPreview}`;
+        }
+        throw new Error(detail);
       }
 
       if (!response.body) {
@@ -512,6 +587,9 @@ export default function PedagogyRefineChatDrawer({
             ) {
               const chunk = event.answer ?? "";
               if (chunk) {
+                if (submitGeneration === submitGenerationRef.current) {
+                  setError("");
+                }
                 assistantText += chunk;
                 const hideStructuredJson =
                   scope === "student" &&
@@ -557,23 +635,32 @@ export default function PedagogyRefineChatDrawer({
                 panelPayload.individualized.length > 0;
               let chatReply = event.chat_reply?.trim() ?? "";
               if (!chatReply) {
-                chatReply =
-                  tryParsePedagogyStructuredAnswerText(assistantText)
-                    ?.chatReply.trim() ?? "";
+                chatReply = resolvePedagogyRefineChatReply({
+                  chatReply: "",
+                  ...panelPayload,
+                });
               }
-              if (chatReply) {
+              if (!chatReply && assistantText.trim()) {
+                const parsedFromStream =
+                  tryParsePedagogyStructuredAnswerText(assistantText);
+                if (parsedFromStream) {
+                  chatReply = resolvePedagogyRefineChatReply(parsedFromStream);
+                }
+              }
+              if (chatReply || hasPanels) {
                 structuredHandled = true;
-                assistantText = chatReply;
-                setMessages((current) =>
-                  current.map((message) =>
-                    message.id === assistantId
-                      ? { ...message, content: chatReply }
-                      : message,
-                  ),
-                );
+                if (chatReply) {
+                  assistantText = chatReply;
+                  setMessages((current) =>
+                    current.map((message) =>
+                      message.id === assistantId
+                        ? { ...message, content: chatReply }
+                        : message,
+                    ),
+                  );
+                }
               }
               if (hasPanels) {
-                structuredHandled = structuredHandled || Boolean(chatReply);
                 onStructuredResult(
                   panelPayload,
                   event.refine_scope === "student" ? "student" : scope,
@@ -674,62 +761,26 @@ export default function PedagogyRefineChatDrawer({
         }
       }
     } catch (err) {
+      if (submitGeneration !== submitGenerationRef.current) {
+        return;
+      }
       const message = err instanceof Error ? err.message : "Chat failed.";
       setError(message);
+      if (
+        /403|401|HTML response|conversation/i.test(message) &&
+        conversationId
+      ) {
+        setConversationId("");
+        sessionStorage.removeItem(conversationKey);
+      }
       setMessages((current) => current.filter((item) => item.id !== assistantId));
     } finally {
-      setBusy(false);
-      setStreamingAssistantId(null);
+      if (submitGeneration === submitGenerationRef.current) {
+        setBusy(false);
+        setStreamingAssistantId(null);
+      }
     }
   }
-
-  useEffect(() => {
-    if (
-      !open ||
-      scope !== "student" ||
-      !individualRefineConfigured ||
-      disabled ||
-      busy ||
-      !individualizedRow ||
-      !seedAnalysisMarkdown.trim()
-    ) {
-      return;
-    }
-    if (studentOpeningSentFor.current === threadKey) {
-      return;
-    }
-    try {
-      const raw = sessionStorage.getItem(messagesKey);
-      if (raw) {
-        const parsed = JSON.parse(raw) as ChatMessage[];
-        if (Array.isArray(parsed) && parsed.some((message) => message.kind === "chat")) {
-          studentOpeningSentFor.current = threadKey;
-          return;
-        }
-      }
-    } catch {
-      // ignore
-    }
-    const ready =
-      messages.some((message) => message.kind === "analysis") ||
-      messages.some((message) => message.kind === "steps-context");
-    if (!ready) {
-      return;
-    }
-    studentOpeningSentFor.current = threadKey;
-    void submitQuery(PEDAGOGY_STUDENT_REFINE_OPENING_QUERY);
-  }, [
-    open,
-    scope,
-    individualRefineConfigured,
-    disabled,
-    busy,
-    individualizedRow,
-    seedAnalysisMarkdown,
-    threadKey,
-    messagesKey,
-    messages,
-  ]);
 
   if (!open || !mounted) {
     return null;

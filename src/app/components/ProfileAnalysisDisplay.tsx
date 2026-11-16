@@ -3,20 +3,36 @@
 import {
   formatProfileAnalysisText,
   parseProfileAnalysisSections,
+  parseProfileSynthesisStructuredFromText,
   PROFILE_SYNTHESIS_SECTION_TITLES,
+  type ProfileSynthesisStructured,
 } from "@/lib/profile-synthesizer";
 import { BilingualStack } from "./Bilingual";
 import MarkdownRichText from "./MarkdownRichText";
+import ProfileSynthesisStructuredDisplay from "./ProfileSynthesisStructuredDisplay";
 
 type ProfileAnalysisDisplayProps = {
   content: string;
+  structured?: ProfileSynthesisStructured | null;
   className?: string;
 };
 
 export default function ProfileAnalysisDisplay({
   content,
+  structured = null,
   className = "",
 }: ProfileAnalysisDisplayProps) {
+  const resolvedStructured =
+    structured ?? parseProfileSynthesisStructuredFromText(content);
+  if (resolvedStructured) {
+    return (
+      <ProfileSynthesisStructuredDisplay
+        data={resolvedStructured}
+        className={className}
+      />
+    );
+  }
+
   const formatted = formatProfileAnalysisText(content);
   const sections = parseProfileAnalysisSections(formatted);
 

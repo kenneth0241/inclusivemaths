@@ -135,7 +135,10 @@ export default function PedagogyContextDetailDialog({
                 enClassName="text-zinc-500"
               />
               <div className="mt-3">
-                <ProfileAnalysisDisplay content={learner.pedagogicalSynthesis} />
+                <ProfileAnalysisDisplay
+                  content={learner.pedagogicalSynthesis}
+                  structured={learner.profileSynthesisStructured}
+                />
               </div>
             </div>
           ) : null}

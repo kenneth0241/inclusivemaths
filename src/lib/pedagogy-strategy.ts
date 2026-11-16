@@ -1,8 +1,12 @@
 import { formatChatDisplayText, splitChatThinkContent } from "@/lib/chat-think";
 import {
-  buildLearnerProfilesDocument,
-  type ProfileSynthesizerDifyInputs,
-  toLearnerProfileWorkflowItem,
+  formatAppliedModesList,
+  formatAppliedModesMarkdown,
+  normalizePedagogyAppliedModes,
+} from "@/lib/pedagogy-applied-modes";
+import {
+  parseProfileSynthesisStructuredFromText,
+  type ProfileSynthesisStructured,
 } from "@/lib/profile-synthesizer";
 import type { StudentRecord } from "@/lib/student-record";
 import type {
@@ -27,44 +31,79 @@ export type PedagogyRefineScope = "udl" | "student";
 export const PEDAGOGY_BASELINE_QUERY =
   "請根據教學主題與學習者檔案，產生全班 UDL（part_1_udl）與個別調適（part_2_individualized）的結構化教學策略。";
 
-export const PEDAGOGY_STUDENT_REFINE_OPENING_QUERY =
-  "請根據 Step 1–2、學習者檔案與目前的個別策略，說明教育理論與支援策略可如何細化。";
-
-/** Dify individualized refine app — Start node (required). */
+/** Dify individualized refine chatflow — Start node (required). */
 export type PedagogyIndividualRefineDifyInputs = {
+  name: string;
   topic_summary: string;
   scope_and_constraints: string;
   visual_models: string;
-  current_theory: string;
-  current_strategy: string;
-  learner_profile: string;
+  /** Matches Dify Start variable `student_bottleneck_analysis`. */
+  student_bottleneck_analysis: string;
+  educational_theory: string;
+  learning_strategies: string;
+  /** e.g. `Chunking (High), Visual Mode (Medium)` */
+  applied_modes: string;
 };
 
-export function formatIndividualRefineLearnerProfile(
-  row: PedagogyIndividualizedRow,
+function resolveRefineStudentDisplayName(
   student: StudentRecord | null,
-  classProfile: string,
+  row: PedagogyIndividualizedRow,
 ): string {
-  const blocks: string[] = [];
-  if (row.studentProfile.trim()) {
-    blocks.push(row.studentProfile.trim());
+  if (student?.name.trim()) {
+    return student.name.trim();
   }
-  if (student) {
-    blocks.push(
-      JSON.stringify(
-        { student: toLearnerProfileWorkflowItem(student) },
-        null,
-        2,
-      ),
-    );
+  const profile = row.studentProfile.trim();
+  if (!profile) {
+    return "";
   }
-  if (row.appliedModes.length > 0) {
-    blocks.push(`Applied modes: ${row.appliedModes.join(", ")}`);
+  const beforeParen = profile.split(/[(/（]/)[0]?.trim();
+  return beforeParen || profile;
+}
+
+function profileSynthesisForRefine(
+  learner: Pick<
+    LearnerProfile,
+    "profileSynthesisStructured" | "pedagogicalSynthesis"
+  >,
+): ProfileSynthesisStructured | null {
+  return (
+    learner.profileSynthesisStructured ??
+    parseProfileSynthesisStructuredFromText(learner.pedagogicalSynthesis)
+  );
+}
+
+/** Step 2 cognitive bottleneck text for the refine chatflow `student_bottleneck_analysis` input. */
+export function resolveStudentBottleneckForRefine(
+  learner: Pick<
+    LearnerProfile,
+    "profileSynthesisStructured" | "pedagogicalSynthesis"
+  >,
+  student: StudentRecord | null,
+  row: PedagogyIndividualizedRow,
+): string {
+  const structured = profileSynthesisForRefine(learner);
+  if (!structured) {
+    return "";
   }
-  if (classProfile.trim()) {
-    blocks.push(`Class profile notes:\n${classProfile.trim()}`);
+  const haystack = [student?.name ?? "", row.studentProfile, student?.id ?? ""]
+    .join(" ")
+    .toLowerCase();
+
+  for (const entry of structured.specific_cognitive_bottlenecks) {
+    const entryName = entry.student_name.trim();
+    if (!entryName) {
+      continue;
+    }
+    const entryLower = entryName.toLowerCase();
+    if (haystack.includes(entryLower)) {
+      return `${entryName}: ${entry.bottleneck_description.trim()}`;
+    }
+    const tokens = entryLower.split(/[\s,()（）/·]+/).filter((t) => t.length > 2);
+    if (tokens.some((token) => haystack.includes(token))) {
+      return `${entryName}: ${entry.bottleneck_description.trim()}`;
+    }
   }
-  return blocks.join("\n\n");
+  return "";
 }
 
 export function buildPedagogyIndividualRefineInputs(input: {
@@ -74,12 +113,18 @@ export function buildPedagogyIndividualRefineInputs(input: {
   >;
   row: PedagogyIndividualizedRow;
   student: StudentRecord | null;
-  classProfile: string;
+  learner: Pick<
+    LearnerProfile,
+    "profileSynthesisStructured" | "pedagogicalSynthesis"
+  >;
 }): PedagogyIndividualRefineDifyInputs {
-  const theory = [input.row.educationalTheoryZh, input.row.educationalTheoryEn]
+  const educational_theory = [
+    input.row.educationalTheoryZh,
+    input.row.educationalTheoryEn,
+  ]
     .filter((value) => value.trim().length > 0)
     .join("\n\n");
-  const strategy = [
+  const learning_strategies = [
     input.row.learningStrategiesZh,
     input.row.learningStrategiesEn,
   ]
@@ -87,16 +132,18 @@ export function buildPedagogyIndividualRefineInputs(input: {
     .join("\n\n");
 
   return {
+    name: resolveRefineStudentDisplayName(input.student, input.row),
     topic_summary: input.footprint.topicSummary.trim(),
     scope_and_constraints: input.footprint.scope.trim(),
     visual_models: input.footprint.visualModels.trim(),
-    current_theory: theory,
-    current_strategy: strategy,
-    learner_profile: formatIndividualRefineLearnerProfile(
-      input.row,
+    student_bottleneck_analysis: resolveStudentBottleneckForRefine(
+      input.learner,
       input.student,
-      input.classProfile,
+      input.row,
     ),
+    educational_theory,
+    learning_strategies,
+    applied_modes: formatAppliedModesList(input.row.appliedModes),
   };
 }
 
@@ -216,11 +263,55 @@ export function mergePedagogyStructuredRefine(
   };
 }
 
-/** Dify Step 3 workflow / chat start variables. */
-export type PedagogyStrategyDifyInputs = Pick<
-  ProfileSynthesizerDifyInputs,
-  "topic_summary" | "scope_and_constraints" | "visual_models" | "learner_profiles"
->;
+/** Dify Step 3 baseline workflow start variables (string inputs). */
+export type PedagogyStrategyDifyInputs = {
+  topic_summary: string;
+  scope_and_constraints: string;
+  visual_models: string;
+  /** JSON text of Step 2 `ProfileSynthesisStructured` (see profile synthesizer schema). */
+  learner_profile_analysis: string;
+};
+
+const EMPTY_PROFILE_SYNTHESIS: ProfileSynthesisStructured = {
+  class_profile_summary: "",
+  goal_alignment: "",
+  specific_cognitive_bottlenecks: [],
+  instructional_accommodations: {
+    tier_1_whole_class: "",
+    tier_2_targeted: [],
+  },
+  behavioral_environmental_management: {
+    whole_class_environment: "",
+    individual_management: [],
+  },
+};
+
+/** Step 2 output as a JSON string for Dify `learner_profile_analysis`. */
+export function buildLearnerProfileAnalysisString(
+  learner: LearnerProfile,
+): string {
+  if (learner.profileSynthesisStructured) {
+    return JSON.stringify(learner.profileSynthesisStructured);
+  }
+  const parsed = parseProfileSynthesisStructuredFromText(
+    learner.pedagogicalSynthesis,
+  );
+  if (parsed) {
+    return JSON.stringify(parsed);
+  }
+  const legacyText = learner.pedagogicalSynthesis.trim();
+  if (!legacyText) {
+    return "";
+  }
+  return JSON.stringify({
+    ...EMPTY_PROFILE_SYNTHESIS,
+    class_profile_summary: legacyText,
+  });
+}
+
+export function learnerProfileAnalysisReady(learner: LearnerProfile): boolean {
+  return buildLearnerProfileAnalysisString(learner).length > 0;
+}
 
 export type PedagogyStrategyRunInput = {
   footprint: Pick<
@@ -234,19 +325,11 @@ export type PedagogyStrategyRunInput = {
 export function buildPedagogyStrategyPayload(
   input: PedagogyStrategyRunInput,
 ): PedagogyStrategyDifyInputs {
-  const learnerDoc = buildLearnerProfilesDocument(input.students);
-  const profileAnalysis = input.learner.pedagogicalSynthesis.trim();
-  const classProfile = input.learner.classProfile.trim();
-
   return {
     topic_summary: input.footprint.topicSummary.trim(),
     scope_and_constraints: input.footprint.scope.trim(),
     visual_models: input.footprint.visualModels.trim(),
-    learner_profiles: JSON.stringify({
-      ...learnerDoc,
-      ...(profileAnalysis ? { profile_analysis: profileAnalysis } : {}),
-      ...(classProfile ? { class_profile: classProfile } : {}),
-    }),
+    learner_profile_analysis: buildLearnerProfileAnalysisString(input.learner),
   };
 }
 
@@ -450,19 +533,41 @@ function parseJsonObjectFromAnswerText(
 }
 
 function buildPedagogyRecordFromLooseJson(text: string): Record<string, unknown> | null {
-  if (!text.includes('"chat_reply"')) {
+  const hasStudentRefineMarker =
+    text.includes('"educational_theory_zh"') ||
+    text.includes('"learning_strategies_zh"');
+  if (!text.includes('"chat_reply"') && !hasStudentRefineMarker) {
     return null;
   }
   const chatReply = extractQuotedJsonStringField(text, "chat_reply");
   const part1 = extractJsonFieldValue(text, "part_1_udl");
   const part2 = extractJsonFieldValue(text, "part_2_individualized");
-  if (!chatReply && part1 == null && part2 == null) {
+  const appliedModes = extractJsonFieldValue(text, "applied_modes");
+  const theoryZh = extractQuotedJsonStringField(text, "educational_theory_zh");
+  const theoryEn = extractQuotedJsonStringField(text, "educational_theory_en");
+  const stratZh = extractQuotedJsonStringField(text, "learning_strategies_zh");
+  const stratEn = extractQuotedJsonStringField(text, "learning_strategies_en");
+  const name = extractQuotedJsonStringField(text, "name");
+  if (
+    !chatReply &&
+    part1 == null &&
+    part2 == null &&
+    !theoryZh &&
+    !stratZh &&
+    appliedModes == null
+  ) {
     return null;
   }
   return {
     ...(chatReply ? { chat_reply: chatReply } : {}),
     ...(part1 != null ? { part_1_udl: part1 } : {}),
     ...(part2 != null ? { part_2_individualized: part2 } : {}),
+    ...(theoryZh ? { educational_theory_zh: theoryZh } : {}),
+    ...(theoryEn ? { educational_theory_en: theoryEn } : {}),
+    ...(stratZh ? { learning_strategies_zh: stratZh } : {}),
+    ...(stratEn ? { learning_strategies_en: stratEn } : {}),
+    ...(appliedModes != null ? { applied_modes: appliedModes } : {}),
+    ...(name ? { name } : {}),
   };
 }
 
@@ -488,7 +593,10 @@ export function tryParsePedagogyStructuredAnswerText(
     const hasStructured =
       typeof record.chat_reply === "string" ||
       record.part_1_udl != null ||
-      record.part_2_individualized != null;
+      record.part_2_individualized != null ||
+      typeof record.educational_theory_zh === "string" ||
+      typeof record.learning_strategies_zh === "string" ||
+      Array.isArray(record.applied_modes);
     if (!hasStructured) {
       continue;
     }
@@ -532,7 +640,9 @@ export function looksLikePedagogyStructuredJsonAnswer(text: string): boolean {
   return (
     trimmed.includes('"chat_reply"') ||
     trimmed.includes('"part_1_udl"') ||
-    trimmed.includes('"part_2_individualized"')
+    trimmed.includes('"part_2_individualized"') ||
+    trimmed.includes('"educational_theory_zh"') ||
+    trimmed.includes('"learning_strategies_zh"')
   );
 }
 
@@ -604,7 +714,7 @@ export function formatIndividualizedRowMarkdown(
   }
   if (row.appliedModes.length > 0) {
     blocks.push(
-      `#### 調適模式 · Applied modes\n\n${row.appliedModes.map((mode) => `- ${mode}`).join("\n")}`,
+      `#### 調適模式 · Applied modes\n\n${formatAppliedModesMarkdown(row.appliedModes)}`,
     );
   }
   return blocks.join("\n\n");
@@ -668,6 +778,33 @@ export function formatStudentRefineSeedMarkdown(
   return `## 首次分析 · Initial analysis\n\n### ${title}\n\n${formatIndividualizedRowMarkdown(row)}`;
 }
 
+/** Chat bubble text when Dify omits or embeds `chat_reply` in structured JSON. */
+export function resolvePedagogyRefineChatReply(
+  parsed: Pick<
+    PedagogyStrategyWorkflowResult,
+    | "chatReply"
+    | "educationalTheory"
+    | "learningStrategies"
+    | "udl"
+    | "individualized"
+  >,
+): string {
+  if (parsed.chatReply.trim()) {
+    return parsed.chatReply.trim();
+  }
+  const markdown = formatPedagogyChatMarkdown(parsed as PedagogyStrategyWorkflowResult);
+  if (markdown.trim()) {
+    return markdown;
+  }
+  if (parsed.individualized.length > 0 || parsed.udl) {
+    return "已更新教學策略 · Strategy panels updated.";
+  }
+  if (parsed.educationalTheory.trim() || parsed.learningStrategies.trim()) {
+    return parsed.educationalTheory.trim() || parsed.learningStrategies.trim();
+  }
+  return "";
+}
+
 export function formatPedagogyChatMarkdown(
   parsed: PedagogyStrategyWorkflowResult,
 ): string {
@@ -709,8 +846,8 @@ export function pedagogyInputFingerprint(
     visual: footprint.visualModels.trim(),
     classId: learner.classId,
     studentIds: learner.studentIds,
-    synthesis: learner.pedagogicalSynthesis.trim(),
     classProfile: learner.classProfile.trim(),
+    learnerProfileAnalysis: buildLearnerProfileAnalysisString(learner),
   });
 }
 
@@ -849,17 +986,9 @@ function parseIndividualizedRows(value: unknown): PedagogyIndividualizedRow[] {
       if (!record) {
         return null;
       }
-      const appliedModes = Array.isArray(record.applied_modes)
-        ? record.applied_modes.filter(
-            (mode): mode is string =>
-              typeof mode === "string" && mode.trim().length > 0,
-          )
-        : Array.isArray(record.appliedModes)
-          ? record.appliedModes.filter(
-              (mode): mode is string =>
-                typeof mode === "string" && mode.trim().length > 0,
-            )
-          : [];
+      const appliedModes = normalizePedagogyAppliedModes(
+        record.applied_modes ?? record.appliedModes,
+      );
       const row: PedagogyIndividualizedRow = {
         studentProfile: pickString(
           record.student_profile,
@@ -903,16 +1032,67 @@ function resolveStructuredRecord(value: unknown): Record<string, unknown> | null
   return asRecord(value);
 }
 
+function structuredPayloadMarkers(record: Record<string, unknown>): boolean {
+  return (
+    record.chat_reply != null ||
+    record.part_1_udl != null ||
+    record.part_2_individualized != null ||
+    record.educational_theory_zh != null ||
+    record.learning_strategies_zh != null ||
+    Array.isArray(record.applied_modes)
+  );
+}
+
+function isIndividualStudentRefineShape(
+  record: Record<string, unknown>,
+): boolean {
+  if (record.part_1_udl != null || record.part_2_individualized != null) {
+    return false;
+  }
+  return (
+    typeof record.educational_theory_zh === "string" ||
+    typeof record.educational_theory_en === "string" ||
+    typeof record.learning_strategies_zh === "string" ||
+    typeof record.learning_strategies_en === "string" ||
+    Array.isArray(record.applied_modes)
+  );
+}
+
+function parseIndividualStudentRefineRecord(
+  record: Record<string, unknown>,
+): PedagogyStrategyWorkflowResult {
+  const chatReply = formatChatDisplayText(pickString(record.chat_reply));
+  const row: PedagogyIndividualizedRow = {
+    studentProfile: pickString(record.name, record.student_profile),
+    educationalTheoryZh: pickString(record.educational_theory_zh),
+    educationalTheoryEn: pickString(record.educational_theory_en),
+    learningStrategiesZh: pickString(record.learning_strategies_zh),
+    learningStrategiesEn: pickString(record.learning_strategies_en),
+    appliedModes: normalizePedagogyAppliedModes(record.applied_modes),
+  };
+  const hasRow =
+    row.studentProfile.length > 0 ||
+    row.educationalTheoryZh.length > 0 ||
+    row.educationalTheoryEn.length > 0 ||
+    row.learningStrategiesZh.length > 0 ||
+    row.learningStrategiesEn.length > 0 ||
+    row.appliedModes.length > 0;
+
+  return {
+    educationalTheory: "",
+    learningStrategies: "",
+    udl: null,
+    individualized: hasRow ? [row] : [],
+    chatReply,
+    raw: record,
+  };
+}
+
 function pickEmbeddedStructuredPayload(
   outputs: Record<string, unknown>,
 ): Record<string, unknown> | null {
   const structured = resolveStructuredRecord(outputs.structured_output);
-  if (
-    structured &&
-    (structured.chat_reply != null ||
-      structured.part_1_udl != null ||
-      structured.part_2_individualized != null)
-  ) {
+  if (structured && structuredPayloadMarkers(structured)) {
     return structured;
   }
   for (const key of ["text", "answer", "output", "result"]) {
@@ -921,12 +1101,7 @@ function pickEmbeddedStructuredPayload(
       continue;
     }
     const parsed = parseJsonObjectFromAnswerText(value);
-    if (
-      parsed &&
-      (parsed.chat_reply != null ||
-        parsed.part_1_udl != null ||
-        parsed.part_2_individualized != null)
-    ) {
+    if (parsed && structuredPayloadMarkers(parsed)) {
       return parsed;
     }
   }
@@ -955,6 +1130,13 @@ export function parsePedagogyWorkflowOutputs(
     structured ??
     asRecord(source.result) ??
     asRecord(source.output);
+
+  for (const candidate of [source, nested, structured]) {
+    const record = candidate ? asRecord(candidate) : null;
+    if (record && isIndividualStudentRefineShape(record)) {
+      return parseIndividualStudentRefineRecord(record);
+    }
+  }
 
   const chatReply = formatChatDisplayText(
     pickString(

@@ -16,7 +16,11 @@ import {
   type WorkflowDraft,
 } from "@/lib/workflow-draft";
 import { StudioStep1FootprintSummary } from "./StudioStep1FootprintSummary";
-import { formatProfileAnalysisText } from "@/lib/profile-synthesizer";
+import StudioAnalysisStatusBanner from "./StudioAnalysisStatusBanner";
+import {
+  formatProfileAnalysisText,
+  type ProfileSynthesisStructured,
+} from "@/lib/profile-synthesizer";
 import { BilingualStack } from "./Bilingual";
 import ProfileAnalysisDisplay from "./ProfileAnalysisDisplay";
 import ProfileSynthesisFullScreenDialog from "./ProfileSynthesisFullScreenDialog";
@@ -39,7 +43,6 @@ export default function LearnerProfileForm({
   const [profileSynthesizerConfigured, setProfileSynthesizerConfigured] =
     useState<boolean | null>(null);
   const [deployHint, setDeployHint] = useState<"local" | "vercel">("local");
-
   useEffect(() => {
     void fetch("/api/config")
       .then((response) => response.json())
@@ -81,6 +84,7 @@ export default function LearnerProfileForm({
       studentIds,
       senTags: mergeInferredSenTags(records),
       pedagogicalSynthesis: "",
+      profileSynthesisStructured: null,
     });
   }
 
@@ -91,6 +95,7 @@ export default function LearnerProfileForm({
       studentIds: [],
       senTags: [],
       pedagogicalSynthesis: "",
+      profileSynthesisStructured: null,
     });
   }
 
@@ -99,7 +104,7 @@ export default function LearnerProfileForm({
       return;
     }
     setAnalysisError("");
-    patch({ pedagogicalSynthesis: "" });
+    patch({ pedagogicalSynthesis: "", profileSynthesisStructured: null });
     setAnalysisBusy(true);
     try {
       const response = await fetch("/api/profile-synthesizer", {
@@ -114,6 +119,7 @@ export default function LearnerProfileForm({
       });
       const body = (await response.json()) as {
         pedagogicalConstraints?: string;
+        structured?: ProfileSynthesisStructured | null;
         error?: string;
       };
       if (!response.ok) {
@@ -123,6 +129,7 @@ export default function LearnerProfileForm({
         pedagogicalSynthesis: formatProfileAnalysisText(
           body.pedagogicalConstraints ?? "",
         ),
+        profileSynthesisStructured: body.structured ?? null,
       });
     } catch (err) {
       setAnalysisError(
@@ -138,6 +145,8 @@ export default function LearnerProfileForm({
     learner.studentIds.length > 0 &&
     isStudioContextReady(footprint) &&
     Boolean(learner.classId);
+
+  const profileAnalyzing = analysisBusy;
 
   function toggleStudent(studentId: string) {
     const next = new Set(learner.studentIds);
@@ -162,7 +171,16 @@ export default function LearnerProfileForm({
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-5">
+      {profileAnalyzing ? (
+        <StudioAnalysisStatusBanner
+          zh="分析中…正在執行 Profile Synthesizer"
+          en="Analyzing… running Profile Synthesizer"
+          subZh="整合 Step 1 內容、課堂備註與所選學生"
+          subEn="Combining Step 1 footprint, class notes, and selected students"
+        />
+      ) : null}
+
       <StudentRecordViewDialog
         student={viewStudent}
         onClose={() => setViewStudent(null)}
@@ -314,11 +332,14 @@ export default function LearnerProfileForm({
           <section className="rounded-3xl bg-white p-5 ring-1 ring-teal-100 sm:p-6">
             <ProfileSynthesisPanel
               synthesis={learner.pedagogicalSynthesis}
+              structured={learner.profileSynthesisStructured}
               loading={analysisBusy}
               canAnalyze={canAnalyze}
               synthesizerConfigured={profileSynthesizerConfigured === true}
               onRunAnalysis={() => void runProfileAnalysis()}
-              onSaveSynthesis={(value) => patch({ pedagogicalSynthesis: value })}
+              onSaveSynthesis={(value) =>
+                patch({ pedagogicalSynthesis: value, profileSynthesisStructured: null })
+              }
             />
           </section>
         </aside>
@@ -329,6 +350,7 @@ export default function LearnerProfileForm({
 
 function ProfileSynthesisPanel({
   synthesis,
+  structured,
   loading,
   canAnalyze,
   synthesizerConfigured,
@@ -336,6 +358,7 @@ function ProfileSynthesisPanel({
   onSaveSynthesis,
 }: {
   synthesis: string;
+  structured: ProfileSynthesisStructured | null;
   loading: boolean;
   canAnalyze: boolean;
   synthesizerConfigured: boolean;
@@ -475,7 +498,10 @@ function ProfileSynthesisPanel({
           </p>
           <div className="mt-3 rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50/60 to-white px-4 py-4 ring-1 ring-teal-100/80">
             <div className="max-h-72 overflow-y-auto pr-1">
-              <ProfileAnalysisDisplay content={displayText} />
+              <ProfileAnalysisDisplay
+                content={displayText}
+                structured={structured}
+              />
             </div>
             <button
               type="button"
@@ -493,6 +519,7 @@ function ProfileSynthesisPanel({
           <ProfileSynthesisFullScreenDialog
             open={expanded}
             content={displayText}
+            structured={structured}
             onClose={() => setExpanded(false)}
             onSave={(value) => onSaveSynthesis(value)}
           />

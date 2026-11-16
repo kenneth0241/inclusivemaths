@@ -132,6 +132,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       pedagogicalConstraints: parsed.pedagogicalConstraints,
+      structured: parsed.structured,
     });
   } catch (error) {
     const message =

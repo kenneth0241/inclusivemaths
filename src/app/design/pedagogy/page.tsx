@@ -18,6 +18,8 @@ export default function PedagogicalStrategyPage() {
       kickerEn="Pedagogical strategy"
       title="Pedagogical Strategy Selector"
       titleEn="教學策略選擇器"
+      proceedLabel="前往教材"
+      proceedLabelEn="Proceed to Assets"
       belowTitle={<PedagogyExecutiveSummaryLauncher />}
     >
       <PedagogicalStrategyStudio />

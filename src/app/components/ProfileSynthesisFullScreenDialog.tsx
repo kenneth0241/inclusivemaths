@@ -5,11 +5,14 @@ import { createPortal } from "react-dom";
 import {
   mergeProfileAnalysisSectionsForEdit,
   PROFILE_SYNTHESIS_SECTION_TITLES,
+  profileSynthesisStructuredToSections,
   serializeProfileAnalysisSections,
   type ProfileAnalysisSection,
+  type ProfileSynthesisStructured,
 } from "@/lib/profile-synthesizer";
 import { BilingualStack } from "./Bilingual";
 import ProfileSynthesisSectionList from "./ProfileSynthesisSectionList";
+import ProfileSynthesisStructuredDisplay from "./ProfileSynthesisStructuredDisplay";
 import WordLikeSummaryEditor, {
   type WordLikeSummaryEditorHandle,
 } from "./WordLikeSummaryEditor";
@@ -17,6 +20,7 @@ import WordLikeSummaryEditor, {
 type ProfileSynthesisFullScreenDialogProps = {
   open: boolean;
   content: string;
+  structured?: ProfileSynthesisStructured | null;
   onClose: () => void;
   onSave: (content: string) => void;
 };
@@ -24,6 +28,7 @@ type ProfileSynthesisFullScreenDialogProps = {
 export default function ProfileSynthesisFullScreenDialog({
   open,
   content,
+  structured = null,
   onClose,
   onSave,
 }: ProfileSynthesisFullScreenDialogProps) {
@@ -46,10 +51,14 @@ export default function ProfileSynthesisFullScreenDialog({
 
   useEffect(() => {
     if (open) {
-      setSections(mergeProfileAnalysisSectionsForEdit(content));
+      setSections(
+        structured
+          ? profileSynthesisStructuredToSections(structured)
+          : mergeProfileAnalysisSectionsForEdit(content),
+      );
       setEditingSectionNumber(null);
     }
-  }, [open, content]);
+  }, [open, content, structured]);
 
   useEffect(() => {
     if (!open) {
@@ -204,6 +213,27 @@ export default function ProfileSynthesisFullScreenDialog({
                 markdown={editingSection.body}
                 className="flex-1"
               />
+            </div>
+          ) : structured ? (
+            <div className="mx-auto w-full max-w-3xl space-y-4">
+              <ProfileSynthesisStructuredDisplay data={structured} />
+              <div className="flex flex-wrap justify-center gap-2 border-t border-zinc-100 pt-4">
+                {([1, 2, 3, 4, 5] as const).map((sectionNumber) => (
+                  <button
+                    key={`edit-section-${sectionNumber}`}
+                    type="button"
+                    onClick={() => setEditingSectionNumber(sectionNumber)}
+                    className="rounded-lg bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-900 ring-1 ring-teal-200 hover:bg-teal-100"
+                  >
+                    <BilingualStack
+                      layout="inline"
+                      zh={`編輯第 ${sectionNumber} 節`}
+                      en={`Edit §${sectionNumber}`}
+                      enClassName="text-teal-800/80"
+                    />
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
             <ProfileSynthesisSectionList

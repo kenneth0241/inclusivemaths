@@ -22,8 +22,44 @@ export type ProfileSynthesizerInput = {
   students: StudentRecord[];
 };
 
+/** Dify Profile Synthesizer structured output (JSON schema). */
+export type ProfileCognitiveBottleneck = {
+  student_name: string;
+  bottleneck_description: string;
+};
+
+export type ProfileTier2Accommodation = {
+  student_name: string;
+  cognitive_challenge: string;
+  solution_context: string;
+};
+
+export type ProfileIndividualManagement = {
+  student_name: string;
+  management_strategies: string;
+};
+
+export type ProfileInstructionalAccommodations = {
+  tier_1_whole_class: string;
+  tier_2_targeted: ProfileTier2Accommodation[];
+};
+
+export type ProfileBehavioralEnvironmentalManagement = {
+  whole_class_environment: string;
+  individual_management: ProfileIndividualManagement[];
+};
+
+export type ProfileSynthesisStructured = {
+  class_profile_summary: string;
+  goal_alignment: string;
+  specific_cognitive_bottlenecks: ProfileCognitiveBottleneck[];
+  instructional_accommodations: ProfileInstructionalAccommodations;
+  behavioral_environmental_management: ProfileBehavioralEnvironmentalManagement;
+};
+
 export type ProfileSynthesizerResult = {
   pedagogicalConstraints: string;
+  structured: ProfileSynthesisStructured | null;
   raw: Record<string, unknown>;
 };
 
@@ -413,9 +449,8 @@ function profileSynthesisSectionBody(number: number, rest: string): string {
     const parsed = splitSectionHeading(trimmed);
     if (parsed.heading && sectionTitleMatchesFixed(parsed.heading, fixed)) {
       body = parsed.body.trim() || trimmed;
-    } else if (parsed.body.trim()) {
-      body = parsed.body.trim();
     }
+    // Keep full body when a leading **bold** line is a student name, not the section title.
     return stripLeadingSectionLabel(number, body);
   }
 
@@ -521,6 +556,339 @@ export function serializeProfileAnalysisSections(
     .join("\n\n");
 }
 
+function extractBalancedJsonObject(text: string, fromIndex = 0): string | null {
+  const start = text.indexOf("{", fromIndex);
+  if (start < 0) {
+    return null;
+  }
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let index = start; index < text.length; index += 1) {
+    const ch = text[index];
+    if (inString) {
+      if (escape) {
+        escape = false;
+      } else if (ch === "\\") {
+        escape = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === "{") {
+      depth += 1;
+    } else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return text.slice(start, index + 1);
+      }
+    }
+  }
+  return null;
+}
+
+function parseJsonObjectLoose(text: string): Record<string, unknown> | null {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const slice = extractBalancedJsonObject(trimmed) ?? trimmed;
+  try {
+    const parsed = JSON.parse(slice) as unknown;
+    return asRecord(parsed);
+  } catch {
+    return null;
+  }
+}
+
+function asStringField(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function parseBottleneckRow(raw: unknown): ProfileCognitiveBottleneck | null {
+  const row = asRecord(raw);
+  if (!row) {
+    return null;
+  }
+  const student_name = asStringField(row.student_name);
+  const bottleneck_description = asStringField(row.bottleneck_description);
+  if (!student_name && !bottleneck_description) {
+    return null;
+  }
+  return { student_name, bottleneck_description };
+}
+
+function parseTier2Row(raw: unknown): ProfileTier2Accommodation | null {
+  const row = asRecord(raw);
+  if (!row) {
+    return null;
+  }
+  const student_name = asStringField(row.student_name);
+  const cognitive_challenge = asStringField(row.cognitive_challenge);
+  const solution_context = asStringField(row.solution_context);
+  if (!student_name && !cognitive_challenge && !solution_context) {
+    return null;
+  }
+  return { student_name, cognitive_challenge, solution_context };
+}
+
+function parseIndividualMgmtRow(
+  raw: unknown,
+): ProfileIndividualManagement | null {
+  const row = asRecord(raw);
+  if (!row) {
+    return null;
+  }
+  const student_name = asStringField(row.student_name);
+  const management_strategies = asStringField(row.management_strategies);
+  if (!student_name && !management_strategies) {
+    return null;
+  }
+  return { student_name, management_strategies };
+}
+
+export function looksLikeProfileSynthesisStructured(
+  record: Record<string, unknown>,
+): boolean {
+  return (
+    typeof record.class_profile_summary === "string" ||
+    typeof record.goal_alignment === "string" ||
+    Array.isArray(record.specific_cognitive_bottlenecks) ||
+    asRecord(record.instructional_accommodations) !== null ||
+    asRecord(record.behavioral_environmental_management) !== null
+  );
+}
+
+/** Normalize arbitrary JSON / Dify object into the profile synthesis schema. */
+export function parseProfileSynthesisStructured(
+  value: unknown,
+): ProfileSynthesisStructured | null {
+  const record = asRecord(value);
+  if (!record || !looksLikeProfileSynthesisStructured(record)) {
+    return null;
+  }
+
+  const accommodations = asRecord(record.instructional_accommodations);
+  const behavioral = asRecord(record.behavioral_environmental_management);
+
+  const bottlenecks = Array.isArray(record.specific_cognitive_bottlenecks)
+    ? record.specific_cognitive_bottlenecks
+        .map(parseBottleneckRow)
+        .filter((row): row is ProfileCognitiveBottleneck => row !== null)
+    : [];
+
+  const tier2 = Array.isArray(accommodations?.tier_2_targeted)
+    ? accommodations.tier_2_targeted
+        .map(parseTier2Row)
+        .filter((row): row is ProfileTier2Accommodation => row !== null)
+    : [];
+
+  const individualManagement = Array.isArray(behavioral?.individual_management)
+    ? behavioral.individual_management
+        .map(parseIndividualMgmtRow)
+        .filter((row): row is ProfileIndividualManagement => row !== null)
+    : [];
+
+  const structured: ProfileSynthesisStructured = {
+    class_profile_summary: asStringField(record.class_profile_summary),
+    goal_alignment: asStringField(record.goal_alignment),
+    specific_cognitive_bottlenecks: bottlenecks,
+    instructional_accommodations: {
+      tier_1_whole_class: asStringField(accommodations?.tier_1_whole_class),
+      tier_2_targeted: tier2,
+    },
+    behavioral_environmental_management: {
+      whole_class_environment: asStringField(
+        behavioral?.whole_class_environment,
+      ),
+      individual_management: individualManagement,
+    },
+  };
+
+  const hasContent =
+    structured.class_profile_summary.length > 0 ||
+    structured.goal_alignment.length > 0 ||
+    structured.specific_cognitive_bottlenecks.length > 0 ||
+    structured.instructional_accommodations.tier_1_whole_class.length > 0 ||
+    structured.instructional_accommodations.tier_2_targeted.length > 0 ||
+    structured.behavioral_environmental_management.whole_class_environment
+      .length > 0 ||
+    structured.behavioral_environmental_management.individual_management
+      .length > 0;
+
+  return hasContent ? structured : null;
+}
+
+export function parseProfileSynthesisStructuredFromText(
+  raw: string,
+): ProfileSynthesisStructured | null {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const { answer } = splitChatThinkContent(trimmed);
+  const visible = (answer || trimmed).trim();
+  const json = parseJsonObjectLoose(visible);
+  if (json) {
+    return parseProfileSynthesisStructured(json);
+  }
+  return null;
+}
+
+function formatStudentBlock(
+  studentName: string,
+  lines: Array<{ label: string; text: string }>,
+): string {
+  const parts: string[] = [];
+  if (studentName.trim()) {
+    parts.push(`**${studentName.trim()}**`);
+  }
+  for (const line of lines) {
+    if (!line.text.trim()) {
+      continue;
+    }
+    parts.push(`*${line.label}*\n\n${line.text.trim()}`);
+  }
+  return parts.join("\n\n");
+}
+
+/** Flatten structured JSON into five editable / display sections. */
+export function profileSynthesisStructuredToSections(
+  data: ProfileSynthesisStructured,
+): ProfileAnalysisSection[] {
+  const section3 =
+    data.specific_cognitive_bottlenecks.length === 0
+      ? ""
+      : data.specific_cognitive_bottlenecks
+          .map((row) =>
+            formatStudentBlock(row.student_name, [
+              { label: "Bottleneck / 認知瓶頸", text: row.bottleneck_description },
+            ]),
+          )
+          .join("\n\n---\n\n");
+
+  const tier1 = data.instructional_accommodations.tier_1_whole_class;
+  const tier2Blocks = data.instructional_accommodations.tier_2_targeted
+    .map((row) =>
+      formatStudentBlock(row.student_name, [
+        {
+          label: "Cognitive challenge / 認知挑戰",
+          text: row.cognitive_challenge,
+        },
+        { label: "Solution / 調適方案", text: row.solution_context },
+      ]),
+    )
+    .filter(Boolean)
+    .join("\n\n---\n\n");
+  const section4 = [
+    tier1.trim() ? `*Tier 1 — whole class / 第一層全班*\n\n${tier1.trim()}` : "",
+    tier2Blocks.trim()
+      ? `*Tier 2 — targeted / 第二層個別*\n\n${tier2Blocks.trim()}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n---\n\n");
+
+  const whole = data.behavioral_environmental_management.whole_class_environment;
+  const indBlocks =
+    data.behavioral_environmental_management.individual_management
+      .map((row) =>
+        formatStudentBlock(row.student_name, [
+          {
+            label: "Strategies / 管理策略",
+            text: row.management_strategies,
+          },
+        ]),
+      )
+      .filter(Boolean)
+      .join("\n\n---\n\n");
+  const section5 = [
+    whole.trim()
+      ? `*Whole-class environment / 全班環境*\n\n${whole.trim()}`
+      : "",
+    indBlocks.trim()
+      ? `*Individual management / 個別管理*\n\n${indBlocks.trim()}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n---\n\n");
+
+  return ([1, 2, 3, 4, 5] as const).map((number) => {
+    const bodyByNumber: Record<number, string> = {
+      1: data.class_profile_summary,
+      2: data.goal_alignment,
+      3: section3,
+      4: section4,
+      5: section5,
+    };
+    return {
+      number,
+      ...fixedSectionHeadings(number),
+      body: bodyByNumber[number] ?? "",
+    };
+  });
+}
+
+export function profileSynthesisStructuredToDisplayText(
+  data: ProfileSynthesisStructured,
+): string {
+  return serializeProfileAnalysisSections(
+    profileSynthesisStructuredToSections(data),
+  );
+}
+
+function extractStructuredFromOutputs(
+  outputs: Record<string, unknown>,
+): ProfileSynthesisStructured | null {
+  if (looksLikeProfileSynthesisStructured(outputs)) {
+    return parseProfileSynthesisStructured(outputs);
+  }
+
+  const structuredOutput = asRecord(outputs.structured_output);
+  if (structuredOutput) {
+    const parsed = parseProfileSynthesisStructured(structuredOutput);
+    if (parsed) {
+      return parsed;
+    }
+  }
+
+  for (const key of [
+    "result",
+    "output",
+    "profile_synthesis",
+    "profile_analysis",
+  ]) {
+    const nested = asRecord(outputs[key]);
+    if (nested && looksLikeProfileSynthesisStructured(nested)) {
+      const parsed = parseProfileSynthesisStructured(nested);
+      if (parsed) {
+        return parsed;
+      }
+    }
+  }
+
+  const stringCandidates: string[] = [];
+  for (const value of Object.values(outputs)) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      stringCandidates.push(value);
+    }
+  }
+  stringCandidates.sort((a, b) => b.length - a.length);
+  for (const candidate of stringCandidates) {
+    const parsed = parseProfileSynthesisStructuredFromText(candidate);
+    if (parsed) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
 /** Drop model think/reasoning blocks; normalize spacing for UI and lesson prefill. */
 export function formatProfileAnalysisText(raw: string) {
   const trimmed = raw.trim();
@@ -535,6 +903,8 @@ export function formatProfileAnalysisText(raw: string) {
 export function parseProfileSynthesizerOutputs(
   outputs: Record<string, unknown>,
 ): ProfileSynthesizerResult {
+  const structured = extractStructuredFromOutputs(outputs);
+
   const nested = asRecord(outputs.result) ?? asRecord(outputs.output);
   const text =
     pickString(
@@ -560,8 +930,13 @@ export function parseProfileSynthesizerOutputs(
       return "";
     })();
 
+  const pedagogicalConstraints = structured
+    ? profileSynthesisStructuredToDisplayText(structured)
+    : formatProfileAnalysisText(text);
+
   return {
-    pedagogicalConstraints: formatProfileAnalysisText(text),
+    pedagogicalConstraints,
+    structured,
     raw: outputs,
   };
 }

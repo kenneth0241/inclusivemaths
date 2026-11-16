@@ -6,6 +6,21 @@ import {
 } from "@/lib/lesson-plan";
 import type { SenTag } from "@/lib/learner-roster";
 import {
+  parseProfileSynthesisStructured,
+  type ProfileSynthesisStructured,
+} from "@/lib/profile-synthesizer";
+import {
+  DEFAULT_GAME_PARAMETERS,
+  normalizeGameParameters,
+  type GameParameters,
+} from "@/lib/game-parameters";
+import { normalizeGameTargetStudentIds } from "@/lib/game-targets";
+import {
+  formatAppliedModesList,
+  normalizePedagogyAppliedModes,
+  type PedagogyAppliedModeEntry,
+} from "@/lib/pedagogy-applied-modes";
+import {
   formatIepForWorkflow,
   type StudentRecord,
 } from "@/lib/student-record";
@@ -31,6 +46,8 @@ export type LearnerProfile = {
   classProfile: string;
   /** Profile Synthesizer (Dify) — pedagogical constraints summary. */
   pedagogicalSynthesis: string;
+  /** Step 2 — Dify structured JSON when the workflow returns schema output. */
+  profileSynthesisStructured: ProfileSynthesisStructured | null;
 };
 
 export type WorkflowLesson = LessonPlanFormValues & {
@@ -40,7 +57,12 @@ export type WorkflowLesson = LessonPlanFormValues & {
 export type WorkflowAssets = {
   worksheetMarkdown: string;
   gameHtml: string;
+  gameParameters: GameParameters;
+  /** Subset of Step 2 `learner.studentIds` targeted by the Step 4 game. */
+  gameTargetStudentIds: string[];
 };
+
+export type { GameParameters };
 
 /** Step 3 — Dify `part_1_udl` (class-wide UDL). */
 export type PedagogyUdlPart = {
@@ -50,6 +72,8 @@ export type PedagogyUdlPart = {
   learningStrategiesEn: string;
 };
 
+export type { PedagogyAppliedModeEntry };
+
 /** Step 3 — one row from `part_2_individualized`. */
 export type PedagogyIndividualizedRow = {
   studentProfile: string;
@@ -57,7 +81,7 @@ export type PedagogyIndividualizedRow = {
   educationalTheoryEn: string;
   learningStrategiesZh: string;
   learningStrategiesEn: string;
-  appliedModes: string[];
+  appliedModes: PedagogyAppliedModeEntry[];
 };
 
 /** Step 3 — pedagogical strategy chat outputs. */
@@ -111,6 +135,7 @@ export const DEFAULT_LEARNER_PROFILE: LearnerProfile = {
   senTags: [],
   classProfile: "",
   pedagogicalSynthesis: "",
+  profileSynthesisStructured: null,
 };
 
 export const DEFAULT_PEDAGOGY_STRATEGY: PedagogicalStrategyState = {
@@ -133,6 +158,8 @@ export const DEFAULT_WORKFLOW_DRAFT: WorkflowDraft = {
   assets: {
     worksheetMarkdown: "",
     gameHtml: "",
+    gameParameters: { ...DEFAULT_GAME_PARAMETERS },
+    gameTargetStudentIds: [],
   },
 };
 
@@ -268,7 +295,7 @@ export function prefillLessonFromStudio(
       ? `Individualized adjustments (Step 3):\n${draft.pedagogy.individualized
           .map(
             (row) =>
-              `- ${row.studentProfile}: ${row.appliedModes.join(", ") || "custom support"}`,
+              `- ${row.studentProfile}: ${formatAppliedModesList(row.appliedModes) || "custom support"}`,
           )
           .join("\n")}`
       : "",
@@ -365,12 +392,17 @@ function parseLearner(raw: unknown): LearnerProfile {
       studentIds = [legacyId];
     }
   }
+  const profileSynthesisStructured = parseProfileSynthesisStructured(
+    raw.profileSynthesisStructured,
+  );
+
   return {
     classId: asString(raw.classId),
     studentIds,
     senTags,
     classProfile: asString(raw.classProfile),
     pedagogicalSynthesis: asString(raw.pedagogicalSynthesis),
+    profileSynthesisStructured,
   };
 }
 
@@ -397,12 +429,7 @@ function parsePedagogyIndividualized(raw: unknown): PedagogyIndividualizedRow[] 
       if (!isRecord(item)) {
         return null;
       }
-      const appliedModes = Array.isArray(item.appliedModes)
-        ? item.appliedModes.filter(
-            (mode): mode is string =>
-              typeof mode === "string" && mode.trim().length > 0,
-          )
-        : [];
+      const appliedModes = normalizePedagogyAppliedModes(item.appliedModes);
       const row: PedagogyIndividualizedRow = {
         studentProfile: asString(item.studentProfile),
         educationalTheoryZh: asString(item.educationalTheoryZh),
@@ -458,14 +485,22 @@ export function parseWorkflowDraft(raw: unknown): WorkflowDraft {
     return DEFAULT_WORKFLOW_DRAFT;
   }
   const assets = isRecord(raw.assets) ? raw.assets : {};
+  const learner = parseLearner(raw.learner);
   return {
     footprint: parseFootprint(raw.footprint),
-    learner: parseLearner(raw.learner),
+    learner,
     pedagogy: parsePedagogy(raw.pedagogy),
     lesson: parseLesson(raw.lesson),
     assets: {
       worksheetMarkdown: asString(assets.worksheetMarkdown),
       gameHtml: asString(assets.gameHtml),
+      gameParameters: normalizeGameParameters(assets.gameParameters),
+      gameTargetStudentIds: normalizeGameTargetStudentIds(
+        "gameTargetStudentIds" in assets
+          ? assets.gameTargetStudentIds
+          : undefined,
+        learner.studentIds,
+      ),
     },
   };
 }

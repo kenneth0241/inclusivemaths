@@ -12,11 +12,14 @@ import {
   WorkflowDraftProvider,
 } from "@/lib/use-workflow-draft";
 import {
+  hasPedagogyBaseline,
+  pedagogyInputFingerprint,
+} from "@/lib/pedagogy-strategy";
+import {
   isFootprintReady,
   isLearnerReady,
   isLearnerStepComplete,
   isProfileSynthesisReady,
-  isLessonReady,
   applyConfirmedStudioContext,
   prefillLessonFromStudio,
 } from "@/lib/workflow-draft";
@@ -63,7 +66,7 @@ type WorkflowShellProps = {
 
 function stepUnlocked(
   target: WorkflowStepId,
-  flags: { footprint: boolean; learner: boolean; lesson: boolean },
+  flags: { footprint: boolean; learner: boolean; pedagogy: boolean },
 ) {
   if (target === 1) {
     return true;
@@ -74,7 +77,7 @@ function stepUnlocked(
   if (target === 3) {
     return flags.footprint && flags.learner;
   }
-  return flags.footprint && flags.learner && flags.lesson;
+  return flags.footprint && flags.learner && flags.pedagogy;
 }
 
 export default function WorkflowShell(props: WorkflowShellProps) {
@@ -119,10 +122,14 @@ function WorkflowShellInner({
       draft.footprint.visualModels,
     ],
   );
+  const pedagogyFingerprint = pedagogyInputFingerprint(
+    draft.footprint,
+    draft.learner,
+  );
   const flags = {
     footprint: isFootprintReady(draft.footprint),
     learner: isLearnerStepComplete(draft.learner),
-    lesson: isLessonReady(draft.lesson),
+    pedagogy: hasPedagogyBaseline(draft.pedagogy, pedagogyFingerprint),
   };
   const learnerPickedNotAnalyzed =
     hydrated &&
@@ -180,7 +187,7 @@ function WorkflowShellInner({
               hydrated &&
               ((item.id === 1 && flags.footprint) ||
                 (item.id === 2 && flags.learner) ||
-                (item.id === 3 && flags.lesson));
+                (item.id === 3 && flags.pedagogy));
             const className = current
               ? "bg-teal-ink text-white ring-teal-ink"
               : unlocked

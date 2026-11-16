@@ -6,6 +6,7 @@ import { formatIndividualizedRowMarkdown } from "@/lib/pedagogy-strategy";
 import type { PedagogyIndividualizedRow } from "@/lib/workflow-draft";
 import { BilingualStack } from "./Bilingual";
 import MarkdownRichText from "./MarkdownRichText";
+import PedagogyAppliedModeChips from "./PedagogyAppliedModeChips";
 
 type PedagogyIndividualizedDetailDialogProps = {
   open: boolean;
@@ -78,15 +79,8 @@ export default function PedagogyIndividualizedDetailDialog({
               />
             </p>
             {row.appliedModes.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {row.appliedModes.map((mode) => (
-                  <span
-                    key={mode}
-                    className="rounded-full bg-sky-100 px-2.5 py-0.5 text-[11px] font-medium text-sky-900 ring-1 ring-sky-200"
-                  >
-                    {mode}
-                  </span>
-                ))}
+              <div className="mt-3">
+                <PedagogyAppliedModeChips modes={row.appliedModes} size="md" />
               </div>
             ) : null}
           </div>

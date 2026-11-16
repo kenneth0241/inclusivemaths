@@ -4,6 +4,7 @@ import type {
   ContentFootprint,
   LearnerProfile,
   PedagogicalStrategyState,
+  PedagogyIndividualizedRow,
   WorkflowDraft,
 } from "@/lib/workflow-draft";
 
@@ -43,6 +44,7 @@ const DEMO_LEARNER: LearnerProfile = {
 ### 08 · Lau Chun Hei (劉晉熙) — SpLD Dyslexia (moderate)
 - 弱項：多步驟應用題工作記憶。
 - 調適：CPA 拆解；逐步揭示題幹；口頭複述後再運算。`,
+  profileSynthesisStructured: null,
 };
 
 /** Sample Step 3 output (matches Dify structured_output shape) — skips live baseline. */
@@ -63,7 +65,7 @@ export function buildPedagogyDemoPedagogyState(
       "Use concrete models such as ten frames, counters, dot cards and colour-coded addends for whole-class input; pair every abstract number sentence with a visual model and gesture. Offer flexible response options such as oral answering, circling pictures, manipulating counters, or writing numerals.",
   };
 
-  const individualized = [
+  const individualized: PedagogyIndividualizedRow[] = [
     {
       studentProfile: "林穎欣 (讀寫障礙 / Dyslexia)",
       educationalTheoryZh:
@@ -74,7 +76,11 @@ export function buildPedagogyDemoPedagogyState(
         "將題目改為簡短指令，並以圖示代替文字；使用十格框和數字卡，每次只呈現一步算式，讓學生先以圓點數數，再配對數字卡，最後才書寫答案。避免朗讀複雜題幹，容許圈畫或指認作答。",
       learningStrategiesEn:
         "Simplify word problems into short instructions with icons; present one step at a time using ten frames and number cards. Let the student count dots, match numeral cards, and then write the answer. Avoid reading complex stems aloud; allow circling or pointing responses.",
-      appliedModes: ["Simplify Mode", "Chunking", "Visual Mode"],
+      appliedModes: [
+        { mode: "Simplify Mode", intensityLevel: "High" },
+        { mode: "Chunking", intensityLevel: "Medium" },
+        { mode: "Visual Mode", intensityLevel: "Medium" },
+      ],
     },
     {
       studentProfile: "劉晉熙 (專注力不足/過度活躍症 / ADHD)",
@@ -86,7 +92,10 @@ export function buildPedagogyDemoPedagogyState(
         "把任務分為「看圖、圈數、寫式、檢查」四步完成；每步只給一個指令，完成後立即回饋。運用十格框和圖卡進行操作，容許站起來拿取教具或短暫活動後再繼續，並以視覺計時提示。",
       learningStrategiesEn:
         "Chunk tasks into 'look, circle, write, check' micro-steps with one instruction at a time and immediate feedback. Use ten frames and picture cards for hands-on engagement; allow brief movement or standing to access materials, and use a visual timer.",
-      appliedModes: ["Chunking", "Visual Mode"],
+      appliedModes: [
+        { mode: "Chunking", intensityLevel: "High" },
+        { mode: "Visual Mode", intensityLevel: "Low" },
+      ],
     },
   ];
 

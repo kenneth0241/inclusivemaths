@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { buildGameHtml, buildWorksheetMarkdown } from "@/lib/asset-generators";
+import { downloadText } from "@/lib/download-text";
 import { useWorkflowDraft } from "@/lib/use-workflow-draft";
 import { isLessonReady } from "@/lib/workflow-draft";
 
@@ -37,16 +38,6 @@ function WorksheetPreview({ markdown }: { markdown: string }) {
       })}
     </div>
   );
-}
-
-function downloadText(filename: string, content: string, type: string) {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
 }
 
 export default function AssetHub() {

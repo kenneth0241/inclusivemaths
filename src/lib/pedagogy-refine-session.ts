@@ -4,6 +4,8 @@ export function pedagogyThreadStorageKeys(threadKey: string) {
   return {
     conversation: `${THREAD_PREFIX}${threadKey}-conversation-id`,
     messages: `${THREAD_PREFIX}${threadKey}-messages`,
+    /** Survives React Strict Mode remounts — avoids duplicate opening API calls. */
+    openingSent: `${THREAD_PREFIX}${threadKey}-opening-sent`,
   };
 }
 
@@ -12,9 +14,11 @@ export function clearPedagogyRefineSession(threadKey?: string) {
     return;
   }
   if (threadKey) {
-    const { conversation, messages } = pedagogyThreadStorageKeys(threadKey);
+    const { conversation, messages, openingSent } =
+      pedagogyThreadStorageKeys(threadKey);
     sessionStorage.removeItem(conversation);
     sessionStorage.removeItem(messages);
+    sessionStorage.removeItem(openingSent);
     return;
   }
   const remove: string[] = [];

@@ -107,15 +107,37 @@ Implementation: `buildLearnerProfilesDocument()` in `src/lib/profile-synthesizer
 
 ## Outputs
 
-Primary structured field:
+**Preferred:** a single JSON object matching the structured schema (Traditional Chinese first, then English in each string). The app parses it from workflow `outputs`, `structured_output`, or JSON embedded after `` in a text field.
 
 ```json
 {
-  "profile_analysis": "Multi-paragraph summary of core pedagogical constraints…"
+  "class_profile_summary": "…",
+  "goal_alignment": "…",
+  "specific_cognitive_bottlenecks": [
+    { "student_name": "…", "bottleneck_description": "…" }
+  ],
+  "instructional_accommodations": {
+    "tier_1_whole_class": "…",
+    "tier_2_targeted": [
+      {
+        "student_name": "…",
+        "cognitive_challenge": "…",
+        "solution_context": "…"
+      }
+    ]
+  },
+  "behavioral_environmental_management": {
+    "whole_class_environment": "…",
+    "individual_management": [
+      { "student_name": "…", "management_strategies": "…" }
+    ]
+  }
 }
 ```
 
-Recommended `profile_analysis` structure — **five numbered sections** (titles are fixed in the app UI; Dify should use `1.`–`5.` and put content after each marker):
+Stored in session as `learner.profileSynthesisStructured` and passed to Step 3 as the Dify string input **`learner_profile_analysis`** (`JSON.stringify` of this object).
+
+**Legacy:** plain-text `profile_analysis` (or aliases below) — **five numbered sections** (titles are fixed in the app UI; Dify should use `1.`–`5.` and put content after each marker):
 
 1. 班級 SEN 概覽 (Class Profile Summary)
 2. 教師目標對齊 (Goal Alignment)

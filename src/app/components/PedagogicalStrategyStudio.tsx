@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   buildPedagogyDemoDraft,
   buildPedagogyDemoPedagogyState,
@@ -22,20 +21,19 @@ import { useWorkflowDraft } from "@/lib/use-workflow-draft";
 import {
   isLearnerStepComplete,
   isStudioContextReady,
-  prefillLessonFromStudio,
 } from "@/lib/workflow-draft";
 import { BilingualStack } from "./Bilingual";
 import EnvConfigBanner from "./EnvConfigBanner";
 import PedagogyRefineChatDrawer from "./PedagogyRefineChatDrawer";
 import PedagogyStrategyWorkspace from "./PedagogyStrategyWorkspace";
 import PedagogyStudioSidebar from "./PedagogyStudioSidebar";
+import StudioAnalysisStatusBanner from "./StudioAnalysisStatusBanner";
 
 type RefineTarget =
   | { scope: "udl" }
   | { scope: "student"; index: number; studentProfile: string };
 
 export default function PedagogicalStrategyStudio() {
-  const router = useRouter();
   const { draft, setDraft, hydrated } = useWorkflowDraft();
   const { findStudent } = useStudentRoster();
   const [baselineLoading, setBaselineLoading] = useState(false);
@@ -135,6 +133,7 @@ export default function PedagogicalStrategyStudio() {
           studentIds: draft.learner.studentIds,
           classProfile: draft.learner.classProfile,
           pedagogicalSynthesis: draft.learner.pedagogicalSynthesis,
+          profileSynthesisStructured: draft.learner.profileSynthesisStructured,
         }),
       });
 
@@ -258,11 +257,6 @@ export default function PedagogicalStrategyStudio() {
     loadDemoContext();
   }, [hydrated]);
 
-  function continueToLessonPlan() {
-    setDraft((current) => prefillLessonFromStudio(current, findStudent));
-    router.push("/design/pedagogy/plan");
-  }
-
   function handleRefineStructured(
     payload: PedagogyStructuredPayload,
     scope: "udl" | "student",
@@ -301,6 +295,13 @@ export default function PedagogicalStrategyStudio() {
   );
 
   const hasBaseline = hasPedagogyBaseline(draft.pedagogy, inputFingerprint);
+
+  const baselineAnalyzing =
+    canUse &&
+    hydrated &&
+    !hasBaseline &&
+    !baselineError &&
+    workflowConfigured !== false;
 
   const refineStudentRow = useMemo(() => {
     if (refineTarget?.scope !== "student") {
@@ -377,6 +378,15 @@ export default function PedagogicalStrategyStudio() {
         </div>
       ) : null}
 
+      {baselineAnalyzing ? (
+        <StudioAnalysisStatusBanner
+          zh="分析中…正在產生 Step 3 教學策略"
+          en="Analyzing… building Step 3 pedagogical strategy"
+          subZh="整合 Step 1 內容足跡與 Step 2 學習者檔案"
+          subEn="Combining Step 1 footprint with Step 2 learner profiles"
+        />
+      ) : null}
+
       {canUse && hydrated ? (
         <div className="flex flex-wrap items-center justify-end gap-2">
           <button
@@ -402,6 +412,7 @@ export default function PedagogicalStrategyStudio() {
             contextReady={canUse}
             hasBaseline={hasBaseline}
             baselineLoading={baselineLoading}
+            baselineAnalyzing={baselineAnalyzing}
             baselineError={baselineError}
             refineBusy={refineBusy}
             onRefineUdl={() => setRefineTarget({ scope: "udl" })}
@@ -423,26 +434,6 @@ export default function PedagogicalStrategyStudio() {
             selectedStudents={selectedStudents}
           />
         </aside>
-      </div>
-
-      <div className="flex justify-end pt-2">
-        <button
-          type="button"
-          disabled={!canUse || !hasBaseline || refineBusy}
-          onClick={continueToLessonPlan}
-          className={`rounded-full px-6 py-3 text-sm font-semibold text-white ${
-            canUse && hasBaseline && !refineBusy
-              ? "unlock-pop bg-teal-ink hover:bg-teal-700"
-              : "cursor-not-allowed bg-zinc-300"
-          }`}
-        >
-          <BilingualStack
-            zh="繼續制定教案"
-            en="Continue to lesson plan"
-            layout="auto"
-            enClassName="text-xs font-medium opacity-90"
-          />
-        </button>
       </div>
 
       <PedagogyRefineChatDrawer

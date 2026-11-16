@@ -10,12 +10,21 @@ import {
   tryParsePedagogyStructuredAnswerText,
 } from "@/lib/pedagogy-strategy";
 import {
+  buildDifyApiUrl,
+  buildDifyHttpHint,
+  describeDifyResponse,
+  difyServiceHeaders,
+  isCloudflareBlockResponse,
+  normalizeDifyApiBase,
   getPedagogyAppMode,
   getPedagogyConfigForMode,
   getPedagogyIndividualRefineAppMode,
   getPedagogyIndividualRefineConfigForMode,
   readDifyError,
+  validateDifyAppApiKey,
 } from "@/lib/dify";
+import type { PedagogyIndividualRefineDifyInputs } from "@/lib/pedagogy-strategy";
+import { normalizePedagogyAppliedModes } from "@/lib/pedagogy-applied-modes";
 import type { PedagogyIndividualizedRow } from "@/lib/workflow-draft";
 import { readStudentsFile } from "@/lib/students-store";
 import {
@@ -77,6 +86,145 @@ function pickPedagogyWorkflowText(record: Record<string, unknown>): string {
   return "";
 }
 
+function validateIndividualRefineInputs(
+  inputs: PedagogyIndividualRefineDifyInputs,
+): string | null {
+  if (!inputs.name.trim()) {
+    return "Individual refine needs a student name (check roster match).";
+  }
+  if (!inputs.topic_summary.trim()) {
+    return "Individual refine needs Step 1 topic summary.";
+  }
+  if (
+    !inputs.educational_theory.trim() &&
+    !inputs.learning_strategies.trim()
+  ) {
+    return "Individual refine needs current theory or strategies on the student row (run Step 3 baseline first).";
+  }
+  return null;
+}
+
+function blockingChatResponseToSse(text: string): string {
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    return `data: ${JSON.stringify({ event: "error", message: text.slice(0, 200) })}\n\n`;
+  }
+  const answer = typeof payload.answer === "string" ? payload.answer : "";
+  const conversationId = payload.conversation_id;
+  const lines = [
+    `data: ${JSON.stringify({
+      event: "message",
+      answer,
+      conversation_id: conversationId,
+    })}\n\n`,
+    `data: ${JSON.stringify({
+      event: "message_end",
+      answer,
+      conversation_id: conversationId,
+    })}\n\n`,
+  ];
+  return lines.join("");
+}
+
+function delay(ms: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function postDifyChatMessage(options: {
+  apiBase: string;
+  apiKey: string;
+  inputs: Record<string, string>;
+  query: string;
+  conversationId?: string;
+  retryWithoutConversationOnAuthError?: boolean;
+}): Promise<Response> {
+  const requestUrl = buildDifyApiUrl(options.apiBase, "/chat-messages");
+  const headers = difyServiceHeaders(options.apiKey);
+
+  const buildBody = (
+    conversationId: string | undefined,
+    responseMode: "streaming" | "blocking",
+  ) =>
+    JSON.stringify({
+      inputs: options.inputs,
+      query: options.query,
+      response_mode: responseMode,
+      conversation_id: conversationId,
+      user: "inclusive-maths-teacher",
+    });
+
+  let conversationId = options.conversationId;
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const response = await fetch(requestUrl, {
+      method: "POST",
+      headers,
+      body: buildBody(conversationId, "streaming"),
+      cache: "no-store",
+    });
+
+    if (response.ok && response.body) {
+      return response;
+    }
+
+    const text = await response.text();
+
+    if (
+      options.retryWithoutConversationOnAuthError &&
+      conversationId &&
+      (response.status === 404 ||
+        isCloudflareBlockResponse(response.status, text)) &&
+      /conversation/i.test(text)
+    ) {
+      conversationId = undefined;
+      continue;
+    }
+
+    if (isCloudflareBlockResponse(response.status, text) && attempt < 3) {
+      await delay(200 * (attempt + 1));
+      continue;
+    }
+
+    if (isCloudflareBlockResponse(response.status, text)) {
+      const blocking = await fetch(requestUrl, {
+        method: "POST",
+        headers,
+        body: buildBody(conversationId, "blocking"),
+        cache: "no-store",
+      });
+      if (blocking.ok) {
+        const blockingText = await blocking.text();
+        return new Response(blockingChatResponseToSse(blockingText), {
+          status: 200,
+          headers: {
+            "Content-Type": "text/event-stream; charset=utf-8",
+          },
+        });
+      }
+    }
+
+    return new Response(text, {
+      status: response.status,
+      headers: response.headers,
+    });
+  }
+
+  return new Response("Dify chat request failed after retries.", { status: 502 });
+}
+
+function difyCredentialLabel(isStudentRefine: boolean, mode: string): string {
+  if (isStudentRefine) {
+    return "DIFY_APP_PEDAGOGY_INDIVIDUAL_API_KEY";
+  }
+  return mode === "workflow"
+    ? "DIFY_APP_PEDAGOGY_API_KEY"
+    : "DIFY_APP_PEDAGOGY_CHAT_API_KEY";
+}
+
 function resolveIndividualRow(
   body: PedagogyChatBody,
 ): PedagogyIndividualizedRow | null {
@@ -94,12 +242,7 @@ function resolveIndividualRow(
       typeof raw.learningStrategiesZh === "string" ? raw.learningStrategiesZh : "",
     learningStrategiesEn:
       typeof raw.learningStrategiesEn === "string" ? raw.learningStrategiesEn : "",
-    appliedModes: Array.isArray(raw.appliedModes)
-      ? raw.appliedModes.filter(
-          (mode): mode is string =>
-            typeof mode === "string" && mode.trim().length > 0,
-        )
-      : [],
+    appliedModes: normalizePedagogyAppliedModes(raw.appliedModes),
   };
 }
 
@@ -112,6 +255,16 @@ export async function POST(request: Request) {
     const { apiKey, apiBase } = isStudentRefine
       ? getPedagogyIndividualRefineConfigForMode(studentMode)
       : getPedagogyConfigForMode(mode);
+
+    const appKeyEnv = isStudentRefine
+      ? "DIFY_APP_PEDAGOGY_INDIVIDUAL_API_KEY"
+      : mode === "workflow"
+        ? "DIFY_APP_PEDAGOGY_API_KEY"
+        : "DIFY_APP_PEDAGOGY_CHAT_API_KEY";
+    const appKeyProblem = validateDifyAppApiKey(apiKey, appKeyEnv);
+    if (appKeyProblem) {
+      return NextResponse.json({ error: appKeyProblem, pedagogyAppMode: mode }, { status: 400 });
+    }
 
     const query = body.query?.trim() ?? "";
     if (!query) {
@@ -178,6 +331,8 @@ export async function POST(request: Request) {
         senTags: [],
         classProfile: body.learner?.classProfile?.trim() ?? "",
         pedagogicalSynthesis: body.learner?.pedagogicalSynthesis?.trim() ?? "",
+        profileSynthesisStructured:
+          body.learner?.profileSynthesisStructured ?? null,
       },
       students,
     });
@@ -188,7 +343,12 @@ export async function POST(request: Request) {
             footprint,
             row: individualizedRow,
             student: matchedStudent,
-            classProfile: body.learner?.classProfile?.trim() ?? "",
+            learner: {
+              profileSynthesisStructured:
+                body.learner?.profileSynthesisStructured ?? null,
+              pedagogicalSynthesis:
+                body.learner?.pedagogicalSynthesis?.trim() ?? "",
+            },
           })
         : null;
 
@@ -243,9 +403,15 @@ export async function POST(request: Request) {
 
       if (!difyResponse.ok) {
         const message = await readDifyError(difyResponse);
+        const hint = buildDifyHttpHint({
+          status: difyResponse.status,
+          apiBase,
+          endpoint: "/workflows/run",
+          appMode: mode,
+        });
         return NextResponse.json(
           {
-            error: message,
+            error: hint ? `${message} ${hint}` : message,
             pedagogyAppMode: mode,
           },
           { status: difyResponse.status || 500 },
@@ -332,30 +498,49 @@ export async function POST(request: Request) {
       );
     }
 
-    const difyResponse = await fetch(`${apiBase}/chat-messages`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        inputs: chatInputs,
-        query,
-        response_mode: "streaming",
-        conversation_id: conversationId,
-        user: "inclusive-maths-teacher",
-      }),
-      cache: "no-store",
+    if (isStudentRefine && individualInputs) {
+      const inputProblem = validateIndividualRefineInputs(individualInputs);
+      if (inputProblem) {
+        return NextResponse.json({ error: inputProblem }, { status: 400 });
+      }
+    }
+
+    const difyResponse = await postDifyChatMessage({
+      apiBase,
+      apiKey,
+      inputs: chatInputs as Record<string, string>,
+      query,
+      conversationId,
+      retryWithoutConversationOnAuthError: isStudentRefine,
     });
 
     if (!difyResponse.ok || !difyResponse.body) {
-      const message = await readDifyError(difyResponse);
-      const hint =
+      const requestUrl = buildDifyApiUrl(apiBase, "/chat-messages");
+      const { message, debug } = await describeDifyResponse(difyResponse, {
+        requestUrl,
+        apiBase: normalizeDifyApiBase(apiBase),
+        credential: difyCredentialLabel(isStudentRefine, mode),
+        appMode: mode,
+        refineScope: body.refine_scope,
+      });
+      console.error("[pedagogy-chat] Dify request failed", debug);
+      const routeHint =
         message.includes("app mode matches the right API route")
           ? ' Your key is likely a Workflow app — set DIFY_APP_PEDAGOGY_APP_MODE=workflow in .env.local, or use a Chatflow app key with DIFY_APP_PEDAGOGY_APP_MODE=chatflow.'
           : "";
+      const httpHint = buildDifyHttpHint({
+        status: difyResponse.status,
+        apiBase,
+        endpoint: "/chat-messages",
+        appMode: mode,
+      });
+      const parts = [message, routeHint, httpHint].filter(Boolean);
       return NextResponse.json(
-        { error: message + hint, pedagogyAppMode: mode },
+        {
+          error: parts.join(" "),
+          pedagogyAppMode: mode,
+          difyDebug: debug,
+        },
         { status: difyResponse.status || 500 },
       );
     }

@@ -103,7 +103,10 @@ export function StudioStep2LearnerSummary({
                 />
               </dt>
               <dd className="mt-2">
-                <ProfileAnalysisDisplay content={learner.pedagogicalSynthesis} />
+                <ProfileAnalysisDisplay
+                  content={learner.pedagogicalSynthesis}
+                  structured={learner.profileSynthesisStructured}
+                />
               </dd>
             </div>
           ) : null}

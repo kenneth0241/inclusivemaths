@@ -1,13 +1,22 @@
 import { NextResponse } from "next/server";
 import {
   buildPedagogyStrategyPayload,
+  learnerProfileAnalysisReady,
   parsePedagogyWorkflowOutputs,
   PEDAGOGY_BASELINE_QUERY,
   toPedagogyStructuredPayload,
 } from "@/lib/pedagogy-strategy";
 import { getPedagogyAppMode, getPedagogyConfigForMode, readDifyError } from "@/lib/dify";
 import { readStudentsFile } from "@/lib/students-store";
-import { isStudioContextReady, type ContentFootprint } from "@/lib/workflow-draft";
+import {
+  parseProfileSynthesisStructured,
+  type ProfileSynthesisStructured,
+} from "@/lib/profile-synthesizer";
+import {
+  isStudioContextReady,
+  type ContentFootprint,
+  type LearnerProfile,
+} from "@/lib/workflow-draft";
 
 export const maxDuration = 120;
 
@@ -16,6 +25,7 @@ type PedagogyStrategyBody = {
   studentIds?: string[];
   classProfile?: string;
   pedagogicalSynthesis?: string;
+  profileSynthesisStructured?: ProfileSynthesisStructured | null;
   footprint?: Partial<ContentFootprint>;
 };
 
@@ -40,6 +50,9 @@ export async function POST(request: Request) {
       : [];
     const classProfile = body.classProfile?.trim() ?? "";
     const pedagogicalSynthesis = body.pedagogicalSynthesis?.trim() ?? "";
+    const profileSynthesisStructured = parseProfileSynthesisStructured(
+      body.profileSynthesisStructured,
+    );
     const footprint = body.footprint ?? {};
 
     if (!classId || studentIds.length === 0) {
@@ -62,7 +75,16 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!pedagogicalSynthesis) {
+    const learnerForPayload: LearnerProfile = {
+      classId,
+      studentIds,
+      senTags: [],
+      classProfile,
+      pedagogicalSynthesis,
+      profileSynthesisStructured,
+    };
+
+    if (!learnerProfileAnalysisReady(learnerForPayload)) {
       return NextResponse.json(
         { error: "Run Profile Synthesizer in Step 2 before strategy analysis." },
         { status: 400 },
@@ -85,13 +107,7 @@ export async function POST(request: Request) {
 
     const inputs = buildPedagogyStrategyPayload({
       footprint: normalizedFootprint,
-      learner: {
-        classId,
-        studentIds,
-        senTags: [],
-        classProfile,
-        pedagogicalSynthesis,
-      },
+      learner: learnerForPayload,
       students,
     });
 

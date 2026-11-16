@@ -16,29 +16,58 @@ Falls back to `DIFY_APP_PEDAGOGY_API_KEY` if the individual key is unset.
 
 | Variable | App source |
 |----------|------------|
+| `name` | Roster student name (or parsed from `student_profile`) |
 | `topic_summary` | Step 1 footprint |
 | `scope_and_constraints` | Step 1 footprint |
 | `visual_models` | Step 1 footprint |
-| `current_theory` | Student row `educational_theory_zh` + `en` |
-| `current_strategy` | Student row `learning_strategies_zh` + `en` |
-| `learner_profile` | `student_profile` + roster JSON + applied modes + class notes |
+| `student_bottleneck_analysis` | Step 2 `specific_cognitive_bottlenecks` row for this student (`{name}: {description}`) |
+| `educational_theory` | Current row — `educational_theory_zh` + `en` |
+| `learning_strategies` | Current row — `learning_strategies_zh` + `en` |
+| `applied_modes` | Current row — e.g. `Chunking (High), Visual Mode (Medium)` |
 
-Optional (workflow follow-up): `query`, `chat_history` if your graph uses them.
+Plus per turn:
+
+| Variable | Role |
+|----------|------|
+| `query` | Teacher message |
+| `conversation_id` | Chatflow session (optional) |
+
+Example:
+
+```json
+{
+  "inputs": {
+    "name": "Lee Ka Yan",
+    "topic_summary": "…",
+    "scope_and_constraints": "…",
+    "visual_models": "…",
+    "student_bottleneck_analysis": "Lee Ka Yan (李嘉恩): 嚴重視覺追蹤困難…",
+    "educational_theory": "CPA 具體-圖像-抽象模式…",
+    "learning_strategies": "結合「拆解模式」與「視覺模式」…",
+    "applied_modes": "Chunking (High), Visual Mode (Medium)"
+  },
+  "query": "Can you design a specific worksheet question for him based on this strategy?",
+  "response_mode": "streaming",
+  "conversation_id": "",
+  "user": "inclusive-maths-teacher"
+}
+```
 
 ## Behaviour
 
-1. Drawer shows Step 1–2 context and the **current individualized analysis** (from baseline).
-2. On first open, the app sends an opening `query` to start the Dify discussion.
-3. Each reply should update structured **Why / How**; the app merges into `part_2_individualized` for that student row.
+1. Drawer shows the **current individualized analysis** (from baseline).
+2. Teacher types the first message; each reply updates theory, strategies, and `applied_modes`; the app merges into `part_2_individualized` for that student index.
 
 ## Chatflow structured output (recommended)
 
-End node / answer schema:
+Root JSON (no `part_1_udl` / `part_2_individualized` wrapper):
 
 | Field | Role |
 |-------|------|
-| `chat_reply` | Markdown shown in the refine drawer chat |
-| `part_1_udl` | Optional class-wide UDL baseline (kept or refined) |
-| `part_2_individualized` | Updated student row(s): theory, strategies, `applied_modes` |
+| `chat_reply` | Markdown in the refine drawer |
+| `educational_theory_zh` / `educational_theory_en` | 教育理論 panels |
+| `learning_strategies_zh` / `learning_strategies_en` | 支援策略 panels |
+| `applied_modes` | `[{ "mode", "intensity_level" }]` — same enum as baseline |
+| `name` | Student name (echo / revise) |
 
-`POST /api/pedagogy-chat` (student + chatflow) transforms the Dify SSE stream: it emits `pedagogy_structured` for the workspace (教育理論 · 支援策略 · 調適模式) and uses `chat_reply` for the assistant bubble instead of raw JSON.
+`POST /api/pedagogy-chat` (student + chatflow) transforms the Dify SSE stream: it emits `pedagogy_structured` for the workspace and uses `chat_reply` for the assistant bubble instead of raw JSON.

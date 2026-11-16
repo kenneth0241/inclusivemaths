@@ -11,6 +11,7 @@ import {
   isPedagogyIndividualRefineConfigured,
   isPedagogyWorkflowConfigured,
   getPedagogyIndividualRefineAppMode,
+  getPedagogyIndividualRefineConfig,
   isProfileSynthesizerConfigured,
   isTopicAnalysisConfigured,
   resolveCorpusDatasetId,
@@ -54,6 +55,23 @@ export async function GET() {
     }
   });
 
+  let pedagogyIndividualRefineApiBase: string | null = null;
+  let pedagogyIndividualRefineKeyKind: "app" | "dataset" | "other" | null =
+    null;
+  if (isPedagogyIndividualRefineConfigured()) {
+    try {
+      const { apiBase, apiKey } = getPedagogyIndividualRefineConfig();
+      pedagogyIndividualRefineApiBase = apiBase;
+      pedagogyIndividualRefineKeyKind = apiKey.startsWith("app-")
+        ? "app"
+        : apiKey.startsWith("dataset-")
+          ? "dataset"
+          : "other";
+    } catch {
+      pedagogyIndividualRefineApiBase = null;
+    }
+  }
+
   return NextResponse.json({
     configured: knowledgeConfigured,
     knowledgeConfigured,
@@ -66,6 +84,8 @@ export async function GET() {
     pedagogyWorkflowConfigured: isPedagogyWorkflowConfigured(),
     pedagogyIndividualRefineConfigured: isPedagogyIndividualRefineConfigured(),
     pedagogyIndividualRefineAppMode: getPedagogyIndividualRefineAppMode(),
+    pedagogyIndividualRefineApiBase,
+    pedagogyIndividualRefineKeyKind,
     pedagogyAppMode: getPedagogyAppMode(),
     textbookDriveConfigured: isTextbookDriveConfigured(),
     deployHint,

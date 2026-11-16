@@ -10,6 +10,7 @@ import type {
   PedagogyIndividualizedRow,
 } from "@/lib/workflow-draft";
 import { BilingualStack } from "./Bilingual";
+import PedagogyAppliedModeChips from "./PedagogyAppliedModeChips";
 import PedagogyIndividualizedDetailDialog from "./PedagogyIndividualizedDetailDialog";
 import PedagogyStrategyResultDialog, {
   type PedagogyStrategyResultPanel,
@@ -40,6 +41,8 @@ type PedagogyStrategyWorkspaceProps = {
   contextReady: boolean;
   hasBaseline: boolean;
   baselineLoading: boolean;
+  /** Step 3: show analysing while waiting on config or Dify baseline. */
+  baselineAnalyzing?: boolean;
   baselineError: string;
   refineBusy: boolean;
   onRefineUdl: () => void;
@@ -51,6 +54,7 @@ export default function PedagogyStrategyWorkspace({
   contextReady,
   hasBaseline,
   baselineLoading,
+  baselineAnalyzing = false,
   baselineError,
   refineBusy,
   onRefineUdl,
@@ -66,7 +70,8 @@ export default function PedagogyStrategyWorkspace({
   const udlStrategiesText =
     formatUdlStrategiesMarkdown(pedagogy.udl) || pedagogy.learningStrategies;
 
-  const ready = hasBaseline && !baselineLoading;
+  const ready = hasBaseline && !baselineLoading && !baselineAnalyzing;
+  const analysing = baselineAnalyzing || baselineLoading;
 
   const resultDialogContent =
     resultDialog === "strategies" ? udlStrategiesText : udlTheoryText;
@@ -91,7 +96,7 @@ export default function PedagogyStrategyWorkspace({
           className={`rounded-2xl px-4 py-3 text-sm ring-1 ${
             baselineError
               ? "border-red-200 bg-red-50 text-red-900 ring-red-100"
-              : baselineLoading
+              : analysing
                 ? "bg-sky-50 text-sky-950 ring-sky-100"
                 : ready
                   ? "bg-emerald-50/90 text-emerald-950 ring-emerald-100"
@@ -99,11 +104,11 @@ export default function PedagogyStrategyWorkspace({
           }`}
           role="status"
         >
-          {baselineLoading ? (
+          {analysing ? (
             <BilingualStack
               layout="stack"
-              zh="正在依 Step 1–2 產生教學策略…"
-              en="Running strategy analysis from Steps 1–2…"
+              zh="分析中…正在依 Step 1–2 產生教學策略"
+              en="Analyzing… generating pedagogical strategy from Steps 1–2"
               enClassName="text-sky-900/85"
             />
           ) : baselineError ? (
@@ -148,7 +153,7 @@ export default function PedagogyStrategyWorkspace({
               titleZh='教育理論 (The "Why")'
               titleEn="Educational Theory"
               preview={briefSummary(udlTheoryText)}
-              loading={baselineLoading}
+              loading={analysing}
               onOpen={() => setResultDialog("theory")}
               disabled={!udlTheoryText.trim()}
             />
@@ -156,7 +161,7 @@ export default function PedagogyStrategyWorkspace({
               titleZh='支援策略 (The "How")'
               titleEn="Class Learning Strategies"
               preview={briefSummary(udlStrategiesText)}
-              loading={baselineLoading}
+              loading={analysing}
               onOpen={() => setResultDialog("strategies")}
               disabled={!udlStrategiesText.trim()}
             />
@@ -195,7 +200,7 @@ export default function PedagogyStrategyWorkspace({
           </p>
 
           <div className="mt-3 space-y-2">
-            {baselineLoading ? (
+            {analysing ? (
               <p className="text-xs text-zinc-500">
                 <BilingualStack zh="分析中…" en="Analyzing…" layout="inline" />
               </p>
@@ -226,15 +231,11 @@ export default function PedagogyStrategyWorkspace({
                       ) : null}
                     </div>
                     {row.appliedModes.length > 0 ? (
-                      <div className="flex max-w-[14rem] flex-wrap justify-end gap-1">
-                        {row.appliedModes.map((mode) => (
-                          <span
-                            key={mode}
-                            className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-900 ring-1 ring-sky-200"
-                          >
-                            {mode}
-                          </span>
-                        ))}
+                      <div className="max-w-full shrink-0">
+                        <PedagogyAppliedModeChips
+                          modes={row.appliedModes}
+                          className="justify-end"
+                        />
                       </div>
                     ) : null}
                   </div>
