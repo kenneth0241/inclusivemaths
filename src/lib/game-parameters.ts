@@ -15,6 +15,8 @@ export type GameUiStylePresetId =
   | "pixel-retro";
 
 export type GameParameters = {
+  /** Full template from `data/game-parameter-templates.json` (system settings). */
+  gameTemplateId: string;
   /** Selected default rules template; `gameRules` holds the template body (+ optional notes). */
   gameRulePreset: GameRulePresetId | "";
   gameRules: string;
@@ -27,6 +29,7 @@ export type GameParameters = {
 };
 
 export const DEFAULT_GAME_PARAMETERS: GameParameters = {
+  gameTemplateId: "",
   gameRulePreset: "",
   gameRules: "",
   scoringMethodPreset: "",
@@ -311,7 +314,10 @@ export function normalizeGameParameters(raw: unknown): GameParameters {
     uiStylePresetRaw === "pixel-retro"
       ? uiStylePresetRaw
       : "";
+  const gameTemplateId =
+    typeof record.gameTemplateId === "string" ? record.gameTemplateId.trim() : "";
   return {
+    gameTemplateId,
     gameRulePreset,
     gameRules,
     scoringMethodPreset,

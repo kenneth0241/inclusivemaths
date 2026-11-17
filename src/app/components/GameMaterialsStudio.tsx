@@ -1,27 +1,94 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DEFAULT_GAME_GENERATION_PROMPT } from "@/lib/game-generation-settings";
+import { ensureUdlGameSlot, pruneLearnerGames } from "@/lib/game-learner-state";
+import {
+  hasClassUdlForGames,
+  isUdlGameTargetId,
+  UDL_GAME_TAB_LABEL,
+  UDL_GAME_TARGET_ID,
+} from "@/lib/game-udl-target";
 import {
   gameTargetIdsEqual,
   normalizeGameTargetStudentIds,
 } from "@/lib/game-targets";
+import { patchLearnerGameSlot } from "@/lib/game-generation";
+import { findPedagogyRowForStudent } from "@/lib/game-pedagogy-match";
 import { hasPedagogyBaseline, pedagogyInputFingerprint } from "@/lib/pedagogy-strategy";
 import { useStudentRoster } from "@/lib/use-student-roster";
 import { useWorkflowDraft } from "@/lib/use-workflow-draft";
 import {
   isLearnerStepComplete,
   isStudioContextReady,
+  type GameLearnerSlot,
+  type LearnerGamesMap,
 } from "@/lib/workflow-draft";
 import { BilingualStack } from "./Bilingual";
+import GameBatchGeneratePanel from "./GameBatchGeneratePanel";
 import GameGenerationChatPanel from "./GameGenerationChatPanel";
 import GameHtmlPreviewPanel from "./GameHtmlPreviewPanel";
 import GameParametersForm from "./GameParametersForm";
 import GameTargetLearnersPanel from "./GameTargetLearnersPanel";
 import MaterialsContextSidebar from "./MaterialsContextSidebar";
+import type { GameLearnerTab } from "./GameLearnerTabBar";
+
+function legacyGameHtmlFromMap(
+  map: LearnerGamesMap,
+  targetIds: string[],
+): string {
+  const first = targetIds[0];
+  return first ? map[first]?.html?.trim() ?? "" : "";
+}
 
 export default function GameMaterialsStudio() {
   const { draft, setDraft, hydrated } = useWorkflowDraft();
   const { findStudent } = useStudentRoster();
+  const [activeStudentId, setActiveStudentId] = useState("");
+  const [generationPrompt, setGenerationPrompt] = useState(
+    DEFAULT_GAME_GENERATION_PROMPT,
+  );
+  const [gameChatConfigured, setGameChatConfigured] = useState(false);
+  const [gameUdlChatConfigured, setGameUdlChatConfigured] = useState(false);
+
+  const refreshGenerationPrompt = useCallback(async () => {
+    try {
+      const response = await fetch("/api/game-templates", { cache: "no-store" });
+      const body = (await response.json()) as { generationPrompt?: string };
+      if (response.ok && body.generationPrompt?.trim()) {
+        setGenerationPrompt(body.generationPrompt.trim());
+      }
+    } catch {
+      /* keep current */
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshGenerationPrompt();
+  }, [refreshGenerationPrompt]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch("/api/config", { cache: "no-store" });
+        const body = (await response.json()) as {
+          gameChatConfigured?: boolean;
+          gameUdlChatConfigured?: boolean;
+        };
+        if (cancelled || !response.ok) {
+          return;
+        }
+        setGameChatConfigured(Boolean(body.gameChatConfigured));
+        setGameUdlChatConfigured(Boolean(body.gameUdlChatConfigured));
+      } catch {
+        /* keep defaults */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const canUse =
     hydrated &&
@@ -34,6 +101,7 @@ export default function GameMaterialsStudio() {
   );
 
   const hasBaseline = hasPedagogyBaseline(draft.pedagogy, inputFingerprint);
+  const studioReady = canUse && hasBaseline;
 
   const rosterStudents = useMemo(
     () =>
@@ -45,25 +113,121 @@ export default function GameMaterialsStudio() {
 
   const selectedStudents = rosterStudents;
 
+  const gameTargetStudents = useMemo(
+    () =>
+      draft.assets.gameTargetStudentIds
+        .map((id) => findStudent(draft.learner.classId, id))
+        .filter((s): s is NonNullable<typeof s> => s !== null),
+    [draft.assets.gameTargetStudentIds, draft.learner.classId, findStudent],
+  );
+
+  const showUdlTab = hasClassUdlForGames(draft.pedagogy);
+
+  const learnerTabs: GameLearnerTab[] = useMemo(() => {
+    const tabs: GameLearnerTab[] = [];
+    if (showUdlTab) {
+      tabs.push({
+        studentId: UDL_GAME_TARGET_ID,
+        name: UDL_GAME_TAB_LABEL,
+        hasHtml: Boolean(
+          draft.assets.learnerGames[UDL_GAME_TARGET_ID]?.html?.trim(),
+        ),
+      });
+    }
+    tabs.push(
+      ...gameTargetStudents.map((student) => ({
+        studentId: student.id,
+        name: student.name,
+        hasHtml: Boolean(draft.assets.learnerGames[student.id]?.html?.trim()),
+      })),
+    );
+    return tabs;
+  }, [gameTargetStudents, draft.assets.learnerGames, showUdlTab]);
+
+  const activeIsUdl = isUdlGameTargetId(activeStudentId);
+
+  const activeStudent = useMemo(() => {
+    if (activeIsUdl) {
+      return null;
+    }
+    return (
+      gameTargetStudents.find((student) => student.id === activeStudentId) ??
+      gameTargetStudents[0] ??
+      null
+    );
+  }, [activeIsUdl, activeStudentId, gameTargetStudents]);
+
+  const activeTargetIndex = useMemo(() => {
+    if (!activeStudent) {
+      return -1;
+    }
+    return draft.assets.gameTargetStudentIds.indexOf(activeStudent.id);
+  }, [activeStudent, draft.assets.gameTargetStudentIds]);
+
+  const activePedagogyRow = useMemo(() => {
+    if (!activeStudent || activeTargetIndex < 0) {
+      return null;
+    }
+    return findPedagogyRowForStudent(
+      draft.pedagogy,
+      activeStudent,
+      activeTargetIndex,
+    );
+  }, [activeStudent, activeTargetIndex, draft.pedagogy]);
+
+  const activeSlotId = activeIsUdl
+    ? UDL_GAME_TARGET_ID
+    : (activeStudent?.id ?? "");
+  const activeSlot = activeSlotId
+    ? draft.assets.learnerGames[activeSlotId]
+    : undefined;
+
+  useEffect(() => {
+    if (!showUdlTab) {
+      return;
+    }
+    setDraft((current) => {
+      const withUdl = ensureUdlGameSlot(
+        current.assets.learnerGames,
+        current.pedagogy,
+      );
+      if (withUdl === current.assets.learnerGames) {
+        return current;
+      }
+      return {
+        ...current,
+        assets: {
+          ...current.assets,
+          learnerGames: withUdl,
+        },
+      };
+    });
+  }, [showUdlTab, setDraft]);
+
   useEffect(() => {
     const normalized = normalizeGameTargetStudentIds(
       draft.assets.gameTargetStudentIds,
       draft.learner.studentIds,
     );
-    if (
-      gameTargetIdsEqual(normalized, draft.assets.gameTargetStudentIds)
-    ) {
+    if (gameTargetIdsEqual(normalized, draft.assets.gameTargetStudentIds)) {
       return;
     }
-    setDraft((current) => ({
-      ...current,
-      assets: { ...current.assets, gameTargetStudentIds: normalized },
-    }));
-  }, [
-    draft.assets.gameTargetStudentIds,
-    draft.learner.studentIds,
-    setDraft,
-  ]);
+    setDraft((current) => {
+      const pruned = pruneLearnerGames(
+        current.assets.learnerGames,
+        normalized,
+      );
+      return {
+        ...current,
+        assets: {
+          ...current.assets,
+          gameTargetStudentIds: normalized,
+          learnerGames: pruned,
+          gameHtml: legacyGameHtmlFromMap(pruned, normalized),
+        },
+      };
+    });
+  }, [draft.assets.gameTargetStudentIds, draft.learner.studentIds, setDraft]);
 
   const prevRosterCount = useRef(0);
   useEffect(() => {
@@ -88,7 +252,60 @@ export default function GameMaterialsStudio() {
     setDraft,
   ]);
 
-  const studioReady = canUse && hasBaseline;
+  useEffect(() => {
+    if (isUdlGameTargetId(activeStudentId) && showUdlTab) {
+      return;
+    }
+    if (
+      activeStudentId &&
+      draft.assets.gameTargetStudentIds.includes(activeStudentId)
+    ) {
+      return;
+    }
+    setActiveStudentId(
+      showUdlTab
+        ? UDL_GAME_TARGET_ID
+        : (draft.assets.gameTargetStudentIds[0] ?? ""),
+    );
+  }, [activeStudentId, draft.assets.gameTargetStudentIds, showUdlTab]);
+
+  function replaceLearnerGames(nextMap: LearnerGamesMap) {
+    setDraft((current) => ({
+      ...current,
+      assets: {
+        ...current.assets,
+        learnerGames: nextMap,
+        gameHtml: legacyGameHtmlFromMap(
+          nextMap,
+          current.assets.gameTargetStudentIds,
+        ),
+      },
+    }));
+  }
+
+  function updateActiveSlot(patch: Partial<GameLearnerSlot>) {
+    if (!activeSlotId) {
+      return;
+    }
+    setDraft((current) => {
+      const nextMap = patchLearnerGameSlot(
+        current.assets.learnerGames,
+        activeSlotId,
+        patch,
+      );
+      return {
+        ...current,
+        assets: {
+          ...current.assets,
+          learnerGames: nextMap,
+          gameHtml: legacyGameHtmlFromMap(
+            nextMap,
+            current.assets.gameTargetStudentIds,
+          ),
+        },
+      };
+    });
+  }
 
   if (!hydrated) {
     return <p className="text-sm text-zinc-500">Loading draft…</p>;
@@ -129,45 +346,111 @@ export default function GameMaterialsStudio() {
             rosterStudents={rosterStudents}
             gameTargetStudentIds={draft.assets.gameTargetStudentIds}
             disabled={!canUse}
-            onChangeGameTargets={(ids) =>
-              setDraft((current) => ({
-                ...current,
-                assets: { ...current.assets, gameTargetStudentIds: ids },
-              }))
-            }
+            onChangeGameTargets={(ids) => {
+              setDraft((current) => {
+                const pruned = pruneLearnerGames(
+                  current.assets.learnerGames,
+                  ids,
+                );
+                return {
+                  ...current,
+                  assets: {
+                    ...current.assets,
+                    gameTargetStudentIds: ids,
+                    learnerGames: pruned,
+                    gameHtml: legacyGameHtmlFromMap(pruned, ids),
+                  },
+                };
+              });
+            }}
           />
 
           <GameParametersForm
             value={draft.assets.gameParameters}
             disabled={!studioReady}
-            onChange={(next) =>
+            onGenerationPromptChange={setGenerationPrompt}
+            onChange={(next) => {
               setDraft((current) => ({
                 ...current,
                 assets: { ...current.assets, gameParameters: next },
-              }))
-            }
+              }));
+            }}
           />
 
+          <div className="lg:hidden">
+            <GameBatchGeneratePanel
+              compact
+              generationPrompt={generationPrompt}
+              gameTargetStudentIds={draft.assets.gameTargetStudentIds}
+              gameTargetStudents={gameTargetStudents}
+              parameters={draft.assets.gameParameters}
+              footprint={draft.footprint}
+              learner={draft.learner}
+              pedagogy={draft.pedagogy}
+              learnerGames={draft.assets.learnerGames}
+              studioReady={studioReady}
+              gameChatConfigured={gameChatConfigured}
+              gameUdlChatConfigured={gameUdlChatConfigured}
+              onLearnerGames={replaceLearnerGames}
+            />
+          </div>
+
           <GameHtmlPreviewPanel
-            gameHtml={draft.assets.gameHtml}
+            tabs={learnerTabs}
+            activeStudentId={activeSlotId}
+            onActiveStudentId={setActiveStudentId}
+            gameHtml={activeSlot?.html ?? ""}
+            student={activeStudent}
+            pedagogyRow={activePedagogyRow}
+            targetIndex={activeTargetIndex}
             draft={draft}
             disabled={!studioReady}
-            onGameHtml={(html) =>
-              setDraft((current) => ({
-                ...current,
-                assets: { ...current.assets, gameHtml: html },
-              }))
-            }
+            onGameHtml={(html) => updateActiveSlot({ html })}
           />
 
           <GameGenerationChatPanel
+            tabs={learnerTabs}
+            activeStudentId={activeSlotId}
+            onActiveStudentId={setActiveStudentId}
+            activeIsUdl={activeIsUdl}
+            student={activeStudent}
+            pedagogyRow={activePedagogyRow}
             parameters={draft.assets.gameParameters}
+            footprint={draft.footprint}
+            learner={draft.learner}
+            pedagogy={draft.pedagogy}
+            messages={activeSlot?.messages ?? []}
+            conversationId={activeSlot?.conversationId ?? ""}
+            currentHtml={activeSlot?.html ?? ""}
             disabled={!studioReady}
+            generationPrompt={generationPrompt}
+            onSlotChange={(patch) =>
+              updateActiveSlot({
+                messages: patch.messages,
+                conversationId: patch.conversationId,
+                ...(patch.html !== undefined ? { html: patch.html } : {}),
+              })
+            }
           />
         </div>
 
         <aside className="hidden min-w-0 lg:block">
-          <div className="sticky top-4">
+          <div className="sticky top-4 space-y-4">
+            <GameBatchGeneratePanel
+              compact
+              generationPrompt={generationPrompt}
+              gameTargetStudentIds={draft.assets.gameTargetStudentIds}
+              gameTargetStudents={gameTargetStudents}
+              parameters={draft.assets.gameParameters}
+              footprint={draft.footprint}
+              learner={draft.learner}
+              pedagogy={draft.pedagogy}
+              learnerGames={draft.assets.learnerGames}
+              studioReady={studioReady}
+              gameChatConfigured={gameChatConfigured}
+              gameUdlChatConfigured={gameUdlChatConfigured}
+              onLearnerGames={replaceLearnerGames}
+            />
             <MaterialsContextSidebar
               footprint={draft.footprint}
               learner={draft.learner}

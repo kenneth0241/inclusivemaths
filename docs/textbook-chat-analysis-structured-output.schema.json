@@ -1,0 +1,30 @@
+{
+  "type": "object",
+  "properties": {
+    "topic_summary": {
+      "type": "string",
+      "description": "Concise 1–2 sentence summary of the textbook topic and scope discussed (may mix 中文 and English in one string)."
+    },
+    "scope_and_constraints": {
+      "type": "string",
+      "description": "Mathematical boundaries from the chat (e.g. addition within 20, no carrying). Single string only — do not split into separate language keys."
+    },
+    "scope_quality_rating": {
+      "type": "integer",
+      "description": "Completeness of scope & constraints, 1–5.",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "scope_feedback": {
+      "type": "string",
+      "description": "Why the scope score was given and what is still missing (teacher-facing feedback)."
+    }
+  },
+  "required": [
+    "topic_summary",
+    "scope_and_constraints",
+    "scope_quality_rating",
+    "scope_feedback"
+  ],
+  "additionalProperties": false
+}

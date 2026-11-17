@@ -16,6 +16,10 @@ import {
 } from "@/lib/game-parameters";
 import { normalizeGameTargetStudentIds } from "@/lib/game-targets";
 import {
+  normalizeLearnerGames,
+  type LearnerGamesMap,
+} from "@/lib/game-learner-state";
+import {
   formatAppliedModesList,
   normalizePedagogyAppliedModes,
   type PedagogyAppliedModeEntry,
@@ -56,11 +60,16 @@ export type WorkflowLesson = LessonPlanFormValues & {
 
 export type WorkflowAssets = {
   worksheetMarkdown: string;
+  /** Legacy single-game HTML; mirrored from first target when present. */
   gameHtml: string;
   gameParameters: GameParameters;
   /** Subset of Step 2 `learner.studentIds` targeted by the Step 4 game. */
   gameTargetStudentIds: string[];
+  /** Per-student game HTML, Dify chat, and preview state. */
+  learnerGames: LearnerGamesMap;
 };
+
+export type { GameLearnerSlot, GameChatMessage, LearnerGamesMap } from "@/lib/game-learner-state";
 
 export type { GameParameters };
 
@@ -107,7 +116,6 @@ export type WorkflowDraft = {
 
 const EXAMPLE_FOOTPRINT_VALUES: Record<FootprintField, string> = {
   scope: "單元 2 · 20以內 · 數的分和合",
-  visualModels: "十格陣 · 數線 · 實物",
 };
 
 function normalizeFootprintValue(field: FootprintField, value: string) {
@@ -160,16 +168,15 @@ export const DEFAULT_WORKFLOW_DRAFT: WorkflowDraft = {
     gameHtml: "",
     gameParameters: { ...DEFAULT_GAME_PARAMETERS },
     gameTargetStudentIds: [],
+    learnerGames: {},
   },
 };
 
-export type FootprintField = "scope" | "visualModels";
+/** Step 1 footprint fields teachers can lock (visual models live in Step 4). */
+export type FootprintField = "scope";
 
 export function isFootprintReady(footprint: ContentFootprint) {
-  return (
-    footprint.scope.trim().length > 0 &&
-    footprint.visualModels.trim().length > 0
-  );
+  return footprint.scope.trim().length > 0;
 }
 
 export function isStudioContextReady(footprint: ContentFootprint) {
@@ -181,7 +188,7 @@ export function isStudioContextReady(footprint: ContentFootprint) {
 
 export type StudioContextConfirmValues = Pick<
   ContentFootprint,
-  "topicSummary" | "scope" | "visualModels"
+  "topicSummary" | "scope"
 >;
 
 export function isLearnerReady(learner: LearnerProfile) {
@@ -284,7 +291,6 @@ export function prefillLessonFromStudio(
       ? `Topic summary:\n${draft.footprint.topicSummary.trim()}`
       : "",
     `Scope & constraints:\n${draft.footprint.scope.trim()}`,
-    `Visual models:\n${draft.footprint.visualModels.trim()}`,
     draft.pedagogy.educationalTheory.trim()
       ? `Educational theory (Step 3):\n${draft.pedagogy.educationalTheory.trim()}`
       : "",
@@ -333,10 +339,7 @@ function parseFootprint(raw: unknown): ContentFootprint {
   return {
     topicSummary: asString(raw.topicSummary),
     scope: normalizeFootprintValue("scope", asString(raw.scope)),
-    visualModels: normalizeFootprintValue(
-      "visualModels",
-      asString(raw.visualModels),
-    ),
+    visualModels: "",
     edited: {
       topicSummary: Boolean(edited.topicSummary),
       scope: Boolean(edited.scope),
@@ -351,17 +354,16 @@ export function applyConfirmedStudioContext(
 ): WorkflowDraft {
   const topicSummary = values.topicSummary.trim();
   const scope = values.scope.trim();
-  const visualModels = values.visualModels.trim();
   return {
     ...draft,
     footprint: {
       topicSummary,
       scope,
-      visualModels,
+      visualModels: "",
       edited: {
         topicSummary: topicSummary.length > 0,
         scope: scope.length > 0,
-        visualModels: visualModels.length > 0,
+        visualModels: false,
       },
     },
     lesson: {
@@ -486,6 +488,22 @@ export function parseWorkflowDraft(raw: unknown): WorkflowDraft {
   }
   const assets = isRecord(raw.assets) ? raw.assets : {};
   const learner = parseLearner(raw.learner);
+  const gameTargetStudentIds = normalizeGameTargetStudentIds(
+    "gameTargetStudentIds" in assets
+      ? assets.gameTargetStudentIds
+      : undefined,
+    learner.studentIds,
+  );
+  const legacyGameHtml = asString(assets.gameHtml);
+  const learnerGames = normalizeLearnerGames(
+    assets.learnerGames,
+    gameTargetStudentIds,
+    legacyGameHtml,
+  );
+  const firstHtml =
+    gameTargetStudentIds.length > 0
+      ? learnerGames[gameTargetStudentIds[0]!]?.html ?? legacyGameHtml
+      : legacyGameHtml;
   return {
     footprint: parseFootprint(raw.footprint),
     learner,
@@ -493,14 +511,10 @@ export function parseWorkflowDraft(raw: unknown): WorkflowDraft {
     lesson: parseLesson(raw.lesson),
     assets: {
       worksheetMarkdown: asString(assets.worksheetMarkdown),
-      gameHtml: asString(assets.gameHtml),
+      gameHtml: firstHtml || legacyGameHtml,
       gameParameters: normalizeGameParameters(assets.gameParameters),
-      gameTargetStudentIds: normalizeGameTargetStudentIds(
-        "gameTargetStudentIds" in assets
-          ? assets.gameTargetStudentIds
-          : undefined,
-        learner.studentIds,
-      ),
+      gameTargetStudentIds,
+      learnerGames,
     },
   };
 }
@@ -554,23 +568,19 @@ export function withClearedChatFootprintFields(draft: WorkflowDraft): WorkflowDr
 
 export function mergeExtractedFootprint(
   current: ContentFootprint,
-  incoming: Pick<ContentFootprint, FootprintField>,
+  incoming: { scope: string },
 ) {
   const next: ContentFootprint = {
     ...current,
     edited: { ...current.edited },
   };
 
-  (["scope", "visualModels"] as const).forEach((field) => {
-    if (current.edited[field]) {
-      return;
+  if (!current.edited.scope) {
+    const extracted = incoming.scope.trim();
+    if (extracted) {
+      next.scope = extracted;
     }
-    const extracted = incoming[field].trim();
-    if (!extracted) {
-      return;
-    }
-    next[field] = extracted;
-  });
+  }
 
   return next;
 }

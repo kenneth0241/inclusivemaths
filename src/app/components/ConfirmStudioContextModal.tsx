@@ -30,12 +30,6 @@ const FIELDS: {
     en: "Specific scope & constraints",
     rows: 4,
   },
-  {
-    key: "visualModels",
-    zh: "視覺圖解與表達",
-    en: "Visual models & representations",
-    rows: 3,
-  },
 ];
 
 export default function ConfirmStudioContextModal({
@@ -78,8 +72,7 @@ export default function ConfirmStudioContextModal({
 
   const canConfirm =
     values.topicSummary.trim().length > 0 &&
-    values.scope.trim().length > 0 &&
-    values.visualModels.trim().length > 0;
+    values.scope.trim().length > 0;
 
   if (!open || !mounted) {
     return null;
@@ -112,8 +105,8 @@ export default function ConfirmStudioContextModal({
           <p className="mt-2 text-sm leading-6 text-zinc-600">
             <BilingualStack
               layout="stack"
-              zh="請檢查並編輯以下三項，確認後會儲存並顯示於第二步（學習者檔案）。"
-              en="Review and edit these three items. After you confirm, they are saved and shown on Step 2 (Learner profile)."
+              zh="請檢查並編輯主題摘要與具體範圍，確認後會儲存並顯示於第二步（學習者檔案）。"
+              en="Review topic summary and scope. After you confirm, they are saved and shown on Step 2 (Learner profile)."
               enClassName="text-zinc-500"
             />
           </p>
@@ -163,7 +156,6 @@ export default function ConfirmStudioContextModal({
               onConfirm({
                 topicSummary: values.topicSummary.trim(),
                 scope: values.scope.trim(),
-                visualModels: values.visualModels.trim(),
               })
             }
             className={`rounded-full px-5 py-2.5 text-sm font-semibold text-white ${

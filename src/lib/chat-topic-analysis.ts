@@ -124,6 +124,17 @@ function asTrimmedString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/** Legacy Dify mistakes: *_zh / *_en split keys (merge if strict schema was bypassed). */
+function joinDistinctStrings(...values: unknown[]): string | undefined {
+  const parts = values
+    .map((value) => asTrimmedString(value))
+    .filter((part) => part.length > 0);
+  if (parts.length === 0) {
+    return undefined;
+  }
+  return parts.join("\n");
+}
+
 /** Dify Textbook_Chat_Analysis: integer rubric 1–5 (stored as-is for UI). */
 function rubricRatingOneToFive(value: unknown): number | null {
   const number =
@@ -216,12 +227,17 @@ export function parseTopicWorkflowOutputs(
     fields.scope_and_constraints ??
       fields.scope ??
       fields.content_scope ??
-      fields.specific_scope,
+      fields.specific_scope ??
+      joinDistinctStrings(
+        fields.scope_and_constraints_zh,
+        fields.scope_and_constraints_en,
+      ),
   );
   const visualModels = asTrimmedString(
     fields.visual_models ??
       fields.visualModels ??
-      fields.visual_models_representations,
+      fields.visual_models_representations ??
+      joinDistinctStrings(fields.visual_models_zh, fields.visual_models_en),
   );
 
   const scopeRatingRaw =
@@ -315,14 +331,13 @@ export function parseTopicWorkflowOutputs(
       : Boolean(
           summary &&
             (scopeQuality >= FOOTPRINT_QUALITY_THRESHOLD ||
-              visualModelsQuality >= FOOTPRINT_QUALITY_THRESHOLD ||
               legacyConfidence >= 3),
         );
 
   return {
     summary,
     topic,
-    footprint: { scope, visualModels },
+    footprint: { scope, visualModels: "" },
     quality: { scope: scopeQuality, visualModels: visualModelsQuality },
     scopeQualityReason,
     visualModelsQualityReason,
@@ -350,19 +365,9 @@ export function studioParsedToView(
     if (scopeNote) {
       signals.push({ label: scopeNote, score: 0 });
     }
-    signals.push({
-      label: "視覺圖解與表達",
-      score: parsed.quality.visualModels,
-    });
-    const visualNote = parsed.visualFeedback ?? parsed.visualModelsQualityReason;
-    if (visualNote) {
-      signals.push({ label: visualNote, score: 0 });
-    }
   }
 
-  const avgConfidence = Math.round(
-    (parsed.quality.scope + parsed.quality.visualModels) / 2,
-  );
+  const avgConfidence = parsed.quality.scope;
 
   return {
     summary: parsed.summary,

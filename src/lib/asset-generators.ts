@@ -1,4 +1,11 @@
+import type { PedagogyIndividualizedRow } from "@/lib/workflow-draft";
 import type { WorkflowDraft } from "@/lib/workflow-draft";
+import type { StudentRecord } from "@/lib/student-record";
+import {
+  pedagogyStrategiesForGame,
+  pedagogyTheoryForGame,
+} from "@/lib/game-pedagogy-match";
+import { formatIepForWorkflow } from "@/lib/student-record";
 
 function topicLabel(draft: WorkflowDraft) {
   return draft.lesson.topic.trim() || draft.footprint.scope.split("·")[0]?.trim() || "一年級數學";
@@ -58,6 +65,53 @@ export function buildWorksheetMarkdown(draft: WorkflowDraft) {
 
 用一句短句子說出你的做法。老師可代寫。
 `;
+}
+
+export function buildGameHtmlForStudent(
+  draft: WorkflowDraft,
+  student: StudentRecord,
+  pedagogyRow: PedagogyIndividualizedRow | null,
+) {
+  const base = buildGameHtml(draft);
+  const learnerProfile = formatIepForWorkflow(student).trim();
+  const theory = pedagogyTheoryForGame(pedagogyRow, draft.pedagogy).trim();
+  const strategies = pedagogyStrategiesForGame(pedagogyRow, draft.pedagogy).trim();
+  const params = draft.assets.gameParameters;
+  const contextBlock = [
+    `<!-- Inclusive Maths · learner: ${escapeHtml(student.name)} (${escapeHtml(student.id)}) -->`,
+    learnerProfile ? `Profile: ${learnerProfile.slice(0, 400)}` : "",
+    theory ? `Theory: ${theory.slice(0, 400)}` : "",
+    strategies ? `Strategies: ${strategies.slice(0, 400)}` : "",
+    params.gameRules.trim() ? `Rules: ${params.gameRules.slice(0, 300)}` : "",
+    params.scoringMethod.trim()
+      ? `Scoring: ${params.scoringMethod.slice(0, 200)}`
+      : "",
+    params.uiStyle.trim() ? `UI: ${params.uiStyle.slice(0, 200)}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const personalizedNote = [
+    theory ? theory.split("\n")[0]?.trim() : "",
+    strategies ? strategies.split("\n")[0]?.trim() : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const noteHtml = personalizedNote
+    ? `<p class="learner-note" style="font-size:0.85rem;color:#5b6f69;margin:0 0 12px">${escapeHtml(personalizedNote)}</p><p style="font-size:0.8rem;color:#7a8f88;margin:0 0 16px">為 ${escapeHtml(student.name)} 調適 · Personalized for ${escapeHtml(student.name)}</p>`
+    : `<p style="font-size:0.8rem;color:#7a8f88;margin:0 0 16px">為 ${escapeHtml(student.name)} · For ${escapeHtml(student.name)}</p>`;
+
+  const commentSafe = contextBlock.replace(/\*\//g, "").replace(/-->/g, "");
+
+  const withTitle = base.replace(
+    "</title>",
+    ` · ${escapeHtml(student.name)}</title>`,
+  );
+
+  return withTitle
+    .replace("<body>", `<body>\n  <!-- ${commentSafe} -->\n`)
+    .replace("<h1>", `${noteHtml}\n    <h1>`);
 }
 
 export function buildGameHtml(draft: WorkflowDraft) {

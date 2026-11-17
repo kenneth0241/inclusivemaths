@@ -113,14 +113,8 @@ function WorkflowShellInner({
     () => ({
       topicSummary: draft.footprint.topicSummary,
       scope: draft.footprint.scope,
-      visualModels: draft.footprint.visualModels,
     }),
-    [
-      confirmStudioOpen,
-      draft.footprint.topicSummary,
-      draft.footprint.scope,
-      draft.footprint.visualModels,
-    ],
+    [confirmStudioOpen, draft.footprint.topicSummary, draft.footprint.scope],
   );
   const pedagogyFingerprint = pedagogyInputFingerprint(
     draft.footprint,

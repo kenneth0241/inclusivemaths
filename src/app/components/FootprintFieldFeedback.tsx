@@ -5,17 +5,10 @@ import { createPortal } from "react-dom";
 import type { FootprintField } from "@/lib/workflow-draft";
 import { BilingualStack } from "./Bilingual";
 
-const FIELD_TITLES: Record<
-  FootprintField,
-  { zh: string; en: string }
-> = {
+const FIELD_TITLES: Record<FootprintField, { zh: string; en: string }> = {
   scope: {
     zh: "具體範圍與限制",
     en: "Specific Scope & Constraints",
-  },
-  visualModels: {
-    zh: "視覺圖解與表達",
-    en: "Visual Models & Representations",
   },
 };
 

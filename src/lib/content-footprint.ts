@@ -33,25 +33,6 @@ const SCOPE_KEYWORDS = [
   "進位",
 ];
 
-const VISUAL_KEYWORDS = [
-  "十格陣",
-  "十格",
-  "數線",
-  "實物",
-  "積木",
-  "手指",
-  "圓點",
-  "圖畫",
-  "CPA",
-  "具體",
-  "圖像",
-  "符號",
-  "ten-frame",
-  "ten frame",
-  "number line",
-  "manipulative",
-];
-
 function uniquePhrases(items: string[]) {
   const seen = new Set<string>();
   const result: string[] = [];
@@ -106,20 +87,18 @@ function recentTranscript(messages: TranscriptMessage[]) {
 
 export function extractContentFootprint(
   messages: TranscriptMessage[],
-): Pick<ContentFootprint, "scope" | "visualModels"> {
+): Pick<ContentFootprint, "scope"> {
   const text = recentTranscript(messages);
   if (!text.trim()) {
-    return { scope: "", visualModels: "" };
+    return { scope: "" };
   }
 
   const scope = uniquePhrases([
     ...collectPatternHits(text, SCOPE_PATTERNS),
     ...collectKeywordHits(text, SCOPE_KEYWORDS),
   ]);
-  const visualModels = uniquePhrases(collectKeywordHits(text, VISUAL_KEYWORDS));
 
   return {
     scope: scope.join(" · "),
-    visualModels: visualModels.join(" · "),
   };
 }

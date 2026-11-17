@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import AppNav from "./AppNav";
+import ManageSubNav from "./ManageSubNav";
 import {
   EMPTY_CURRENT_PERFORMANCE,
   EMPTY_IEP_DOMAINS,
@@ -368,6 +369,7 @@ export function StudentRosterManageShell() {
           Local JSON database for Step 2. General students need id, name, and
           class; SEN students include IEP fields.
         </p>
+        <ManageSubNav />
         <div className="mt-8">
           <StudentRosterManager />
         </div>

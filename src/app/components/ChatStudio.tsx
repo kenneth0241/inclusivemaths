@@ -74,13 +74,13 @@ export default function ChatStudio() {
   }, []);
 
   const mergeFootprintIntoDraft = useCallback(
-    (incoming: { scope: string; visualModels: string }) => {
+    (incoming: { scope: string }) => {
       if (!hydrated) {
         return;
       }
       setDraft((current) => {
         const merged = mergeExtractedFootprint(current.footprint, incoming);
-        const changed = (["scope", "visualModels"] as const).filter(
+        const changed = (["scope"] as const).filter(
           (field) => merged[field] !== current.footprint[field],
         );
         if (changed.length > 0) {
@@ -102,12 +102,12 @@ export default function ChatStudio() {
     ) {
       return;
     }
-    const { scope, visualModels } = studioAnalysis.analysis.footprint;
+    const { scope } = studioAnalysis.analysis.footprint;
     const summary = studioAnalysis.analysis.summary?.trim() ?? "";
-    if (!scope.trim() && !visualModels.trim() && !summary) {
+    if (!scope.trim() && !summary) {
       return;
     }
-    mergeFootprintIntoDraft({ scope, visualModels });
+    mergeFootprintIntoDraft({ scope });
     if (summary) {
       setDraft((current) => {
         if (current.footprint.edited.topicSummary) {

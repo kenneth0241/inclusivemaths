@@ -52,9 +52,7 @@ export default function MaterialsContextSidebar({
   const synthesisText = formatProfileAnalysisText(learner.pedagogicalSynthesis);
 
   const step1Preview = briefSummary(
-    footprint.topicSummary.trim() ||
-      footprint.scope.trim() ||
-      footprint.visualModels.trim(),
+    footprint.topicSummary.trim() || footprint.scope.trim(),
   );
   const step2Preview = briefSummary(
     synthesisText ||

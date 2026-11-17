@@ -13,7 +13,7 @@ const STEPS = [
     href: "/chat",
     title: "1. Chat with Textbook",
     zh: "課本對話",
-    body: "Extract scope and visual models from the textbook chat.",
+    body: "Extract topic summary and scope from the textbook chat.",
   },
   {
     href: "/design/profile",

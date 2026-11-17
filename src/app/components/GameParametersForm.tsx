@@ -1,6 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useId, useState } from "react";
+import {
+  templateToGameParameters,
+  type GameParameterTemplate,
+} from "@/lib/game-parameter-template";
 import {
   GAME_RULE_PRESETS,
   GAME_SCORING_PRESETS,
@@ -15,11 +20,14 @@ import {
   type GameUiStylePresetId,
 } from "@/lib/game-parameters";
 import { BilingualStack } from "./Bilingual";
+import GameGenerationPromptSettingsDialog from "./GameGenerationPromptSettingsDialog";
+import GameSampleHtmlPreviewDialog from "./GameSampleHtmlPreviewDialog";
 
 type GameParametersFormProps = {
   value: GameParameters;
   disabled?: boolean;
   onChange: (next: GameParameters) => void;
+  onGenerationPromptChange?: (prompt: string) => void;
 };
 
 type ParameterTabId = "rules" | "scoring" | "ui";
@@ -56,11 +64,18 @@ export default function GameParametersForm({
   value,
   disabled = false,
   onChange,
+  onGenerationPromptChange,
 }: GameParametersFormProps) {
   const panelId = useId();
   const tabListId = useId();
   const [expanded, setExpanded] = useState(true);
   const [activeTab, setActiveTab] = useState<ParameterTabId>("rules");
+  const [templates, setTemplates] = useState<GameParameterTemplate[]>([]);
+  const [templatesError, setTemplatesError] = useState("");
+  const [samplePreview, setSamplePreview] = useState<GameParameterTemplate | null>(
+    null,
+  );
+  const [promptSettingsOpen, setPromptSettingsOpen] = useState(false);
   const hasContent = hasGameParametersContent(value);
 
   useEffect(() => {
@@ -69,25 +84,66 @@ export default function GameParametersForm({
     }
   }, [hasContent]);
 
-  function applyRulesPreset(id: GameRulePresetId) {
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch("/api/game-templates", { cache: "no-store" });
+        const body = (await response.json()) as {
+          templates?: GameParameterTemplate[];
+          error?: string;
+        };
+        if (!response.ok) {
+          throw new Error(body.error || "Could not load templates.");
+        }
+        if (!cancelled) {
+          setTemplates(body.templates ?? []);
+          setTemplatesError("");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setTemplatesError(
+            err instanceof Error ? err.message : "Could not load templates.",
+          );
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function applyFullTemplate(template: GameParameterTemplate) {
     onChange({
       ...value,
+      ...templateToGameParameters(template),
+    });
+  }
+
+  function clearTemplateSelection(patch: Partial<GameParameters>) {
+    onChange({
+      ...value,
+      gameTemplateId: "",
+      ...patch,
+    });
+  }
+
+  function applyRulesPreset(id: GameRulePresetId) {
+    clearTemplateSelection({
       gameRulePreset: "",
       gameRules: gameRulePresetBody(id),
     });
   }
 
   function applyScoringPreset(id: GameScoringPresetId) {
-    onChange({
-      ...value,
+    clearTemplateSelection({
       scoringMethodPreset: "",
       scoringMethod: gameScoringPresetBody(id),
     });
   }
 
   function applyUiPreset(id: GameUiStylePresetId) {
-    onChange({
-      ...value,
+    clearTemplateSelection({
       uiStylePreset: "",
       uiStyle: gameUiStylePresetBody(id),
     });
@@ -108,8 +164,8 @@ export default function GameParametersForm({
           {expanded ? (
             <p className="mt-1 text-xs leading-5 text-zinc-500">
               <BilingualStack
-                zh="點選預設會取代下方文字框內容，亦可直接輸入或修改。"
-                en="Tap a preset to replace the text below, or type and edit freely."
+                zh="先選套裝模板（一次套用規則／計分／介面），或於分頁內逐項微調。"
+                en="Pick a full template first, or adjust Rules / Scoring / UI per tab."
                 layout="stack"
                 enClassName="text-zinc-400"
               />
@@ -157,6 +213,108 @@ export default function GameParametersForm({
         hidden={!expanded}
         className="space-y-4 p-5 pt-4 sm:p-6 sm:pt-4"
       >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-xs font-semibold text-zinc-800">
+            <BilingualStack
+              zh="套裝模板"
+              en="Full templates"
+              layout="inline"
+              enClassName="text-zinc-500"
+            />
+          </h3>
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => setPromptSettingsOpen(true)}
+            className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-medium text-teal-900 ring-1 ring-zinc-200 hover:bg-teal-50 disabled:opacity-50"
+          >
+            <BilingualStack
+              zh="提示設定"
+              en="Prompt settings"
+              layout="inline"
+            />
+          </button>
+        </div>
+        {templatesError ? (
+          <p className="text-xs text-amber-900">{templatesError}</p>
+        ) : null}
+        {templates.length === 0 && !templatesError ? (
+          <p className="text-xs text-zinc-500">
+            <BilingualStack
+              layout="inline"
+              zh="尚無模板。"
+              en="No templates yet."
+            />{" "}
+            <Link
+              href="/manage/game-templates"
+              className="font-medium text-teal-800 underline"
+            >
+              <BilingualStack
+                layout="inline"
+                zh="於系統設定新增"
+                en="Add in system settings"
+              />
+            </Link>
+          </p>
+        ) : null}
+        <ul className="grid gap-2 sm:grid-cols-1">
+          {templates.map((template) => {
+            const selected = value.gameTemplateId === template.id;
+            const hasSample = template.sample_html.trim().length > 0;
+            return (
+              <li key={template.id}>
+                <div
+                  className={`flex flex-wrap items-center gap-2 rounded-2xl border p-3 text-left transition ${
+                    selected
+                      ? "border-teal-300 bg-teal-50/80 ring-1 ring-teal-200"
+                      : "border-zinc-200 bg-zinc-50/50 hover:border-teal-200"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => applyFullTemplate(template)}
+                    className="min-w-0 flex-1 text-left disabled:opacity-50"
+                  >
+                    <span className="block text-sm font-medium text-zinc-900">
+                      {template.name}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-zinc-500">
+                      {selected ? (
+                        <BilingualStack
+                          layout="inline"
+                          zh="已選用"
+                          en="Selected"
+                        />
+                      ) : (
+                        <BilingualStack
+                          layout="inline"
+                          zh="點選套用規則、計分、介面"
+                          en="Apply rules, scoring, and UI"
+                        />
+                      )}
+                    </span>
+                  </button>
+                  {hasSample ? (
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => setSamplePreview(template)}
+                      className="shrink-0 rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-teal-900 ring-1 ring-teal-200 hover:bg-teal-50 disabled:opacity-50"
+                    >
+                      <BilingualStack
+                        layout="inline"
+                        zh="範例"
+                        en="Sample"
+                      />
+                    </button>
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+
         <div
           id={tabListId}
           role="tablist"
@@ -221,8 +379,7 @@ export default function GameParametersForm({
             disabled={disabled}
             onApplyPreset={(id) => applyRulesPreset(id as GameRulePresetId)}
             onBodyChange={(nextBody) =>
-              onChange({
-                ...value,
+              clearTemplateSelection({
                 gameRulePreset: "",
                 gameRules: nextBody,
               })
@@ -251,8 +408,7 @@ export default function GameParametersForm({
             disabled={disabled}
             onApplyPreset={(id) => applyScoringPreset(id as GameScoringPresetId)}
             onBodyChange={(nextBody) =>
-              onChange({
-                ...value,
+              clearTemplateSelection({
                 scoringMethodPreset: "",
                 scoringMethod: nextBody,
               })
@@ -281,8 +437,7 @@ export default function GameParametersForm({
             disabled={disabled}
             onApplyPreset={(id) => applyUiPreset(id as GameUiStylePresetId)}
             onBodyChange={(nextBody) =>
-              onChange({
-                ...value,
+              clearTemplateSelection({
                 uiStylePreset: "",
                 uiStyle: nextBody,
               })
@@ -290,6 +445,16 @@ export default function GameParametersForm({
           />
         </div>
       </div>
+
+      <GameSampleHtmlPreviewDialog
+        template={samplePreview}
+        onClose={() => setSamplePreview(null)}
+      />
+      <GameGenerationPromptSettingsDialog
+        open={promptSettingsOpen}
+        onClose={() => setPromptSettingsOpen(false)}
+        onSaved={(prompt) => onGenerationPromptChange?.(prompt)}
+      />
     </section>
   );
 }

@@ -466,7 +466,7 @@ function ProfileSynthesisPanel({
           <p className="mt-2 text-center text-xs text-zinc-500">
             <BilingualStack
               layout="stack"
-              zh="請先選擇班別與至少一名學生，並確認 Step 1 三項內容。"
+              zh="請先選擇班別與至少一名學生，並確認 Step 1 主題與範圍。"
               en="Select a class and students, and confirm Step 1 footprint first."
               enClassName="text-zinc-400"
             />

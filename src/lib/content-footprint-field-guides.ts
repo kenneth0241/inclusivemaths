@@ -53,44 +53,9 @@ const SCOPE_GUIDE: FootprintFieldGuideContent = {
   ],
 };
 
-const VISUAL_GUIDE: FootprintFieldGuideContent = {
-  titleZh: "視覺圖解與表達",
-  titleEn: "Visual Models & Representations",
-  blocks: [
-    {
-      headingZh: "❓ 為什麼我們需要這個？",
-      headingEn: "❓ Why do we need this?",
-      bodyZh:
-        "SpLD 學生通常難以直接理解抽象的數字符號（如 3 + 2 = 5）。他們高度依賴「具體－圖像－抽象（CPA, Concrete-Pictorial-Abstract）」的學習歷程。了解課本採用了哪種視覺圖解，我們才能在設計工作紙和互動遊戲時，採用與課本完全一致的視覺提示。如果課本用「十格陣」，而我們的工作紙卻用了「數線」，這種視覺不一致會讓 SpLD 學生感到混淆並產生挫敗感。",
-      bodyEn:
-        'Students with SpLD often struggle to process abstract numerical symbols directly (e.g., 3 + 2 = 5). They rely heavily on the Concrete-Pictorial-Abstract (CPA) learning progression. By understanding which visual models the textbook uses, we can ensure our generated worksheets and interactive games use the exact same visual cues. If the textbook uses "Ten-frames" but our worksheet uses a "Number Line," this visual inconsistency will cause confusion and frustration for SpLD students.',
-    },
-    {
-      headingZh: "💡 我們期望老師填寫什麼？",
-      headingEn: "💡 What should you enter?",
-      bodyZh: "請告訴我們課本是「畫什麼圖」來解釋這個數學概念的：",
-      bodyEn:
-        "Please tell us what kind of graphics or models the textbook draws to explain the concept:",
-      examplesZh: [
-        "✅ 好例子（加減法）：課本使用了「分和合圖（Number Bonds）」來展示數字的拆解。",
-        "✅ 好例子（數數與進位）：課本主要使用「十格陣（Ten-frames）」和「積木數粒（Base-10 blocks）」來表達十位和個位。",
-        "✅ 好例子（數列或排序）：課本畫了一條有箭頭的「數線（Number Line）」，並以青蛙跳躍的圖示來代表加法前進。",
-        "✅ 好例子（分數）：課本使用了「被等分的圓形披薩圖」，而不是長條圖。",
-      ],
-      examplesEn: [
-        '✅ Good example (addition/subtraction): The textbook uses "Number Bonds" to demonstrate splitting numbers.',
-        '✅ Good example (counting/place value): The textbook primarily uses "Ten-frames" and "Base-10 blocks" to represent tens and units.',
-        '✅ Good example (number sequences): The textbook draws a "Number Line" with arrows and frog jumps to represent moving forward in addition.',
-        '✅ Good example (fractions): The textbook uses "Equally divided circular pizzas" instead of rectangular bar models.',
-      ],
-    },
-  ],
-};
-
 export const FOOTPRINT_FIELD_GUIDES: Record<
   FootprintField,
   FootprintFieldGuideContent
 > = {
   scope: SCOPE_GUIDE,
-  visualModels: VISUAL_GUIDE,
 };

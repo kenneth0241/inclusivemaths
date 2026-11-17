@@ -108,9 +108,7 @@ export async function POST(request: Request) {
       ready: parsed.ready,
       suggestedQuestion: parsed.suggestedQuestion,
       reason: parsed.reason,
-      confidence: Math.round(
-        (parsed.quality.scope + parsed.quality.visualModels) / 2,
-      ),
+      confidence: parsed.quality.scope,
     });
   } catch (error) {
     const message =

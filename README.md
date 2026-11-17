@@ -107,8 +107,8 @@ If Dify merges both nodes into one streamed `answer` (common with two LLM nodes)
 After each assistant reply on `/chat`, the site sends the **conversation transcript** to a separate **Workflow** (blocking). That run powers:
 
 - **Discussion summary** (sidebar + green suggestion card)
-- **Content Footprint** auto-fill for scope and visual models (teacher edits lock fields)
-- **Footprint quality index** — rubric scores for scope and visual models (replaces the old single “topic confidence” meter)
+- **Content Footprint** — topic summary + scope & constraints (teacher edits lock scope)
+- **Footprint quality index** — rubric score for scope (replaces the old single “topic confidence” meter)
 
 The main **Chatflow** still handles streamed answers and LLM2 follow-up chips; this workflow is **post-reply studio analysis** only.
 

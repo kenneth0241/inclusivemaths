@@ -400,6 +400,53 @@ export function getPedagogyIndividualRefineConfigForMode(
   return mode === "workflow" ? base : { ...base, apiBase: pedagogyIndividualApiBase() };
 }
 
+/** Step 4 — per-learner HTML game chatflow (POST /chat-messages). */
+export function getGameChatConfig() {
+  const apiKey = process.env.DIFY_APP_GAME_API_KEY?.trim();
+  const apiBase = normalizeDifyApiBase(
+    process.env.DIFY_APP_GAME_API_BASE?.trim() ||
+      process.env.DIFY_APP_PEDAGOGY_CHAT_API_BASE?.trim() ||
+      pedagogyApiBase(),
+  );
+  if (!apiKey || apiKey.includes("xxxxxxxx")) {
+    throw new Error("DIFY_APP_GAME_API_KEY is not set");
+  }
+  return { apiKey, apiBase };
+}
+
+export function isGameChatConfigured() {
+  try {
+    getGameChatConfig();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Step 4 — UDL / whole-class HTML game chatflow (separate Dify app). */
+export function getGameUdlChatConfig() {
+  const apiKey = process.env.DIFY_APP_GAME_UDL_API_KEY?.trim();
+  const apiBase = normalizeDifyApiBase(
+    process.env.DIFY_APP_GAME_UDL_API_BASE?.trim() ||
+      process.env.DIFY_APP_GAME_API_BASE?.trim() ||
+      process.env.DIFY_APP_PEDAGOGY_CHAT_API_BASE?.trim() ||
+      pedagogyApiBase(),
+  );
+  if (!apiKey || apiKey.includes("xxxxxxxx")) {
+    throw new Error("DIFY_APP_GAME_UDL_API_KEY is not set");
+  }
+  return { apiKey, apiBase };
+}
+
+export function isGameUdlChatConfigured() {
+  try {
+    getGameUdlChatConfig();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function difyFetch(path: string, init?: RequestInit) {
   const { apiKey, apiBase } = getDifyConfig();
   const response = await fetch(`${apiBase}${path}`, {

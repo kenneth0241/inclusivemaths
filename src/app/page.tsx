@@ -6,7 +6,7 @@ const STEPS = [
     step: "1",
     title: "Chat with the textbook",
     zh: "課本對話",
-    body: "Explore the MathsTextbook knowledge base. Lock in scope and visual models.",
+    body: "Explore the MathsTextbook knowledge base. Lock in topic and scope.",
   },
   {
     step: "2",

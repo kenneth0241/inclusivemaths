@@ -23,12 +23,6 @@ const FIELDS: {
     en: "Specific Scope & Constraints",
     hint: "(e.g. 10 以內加法，不涉及進位)",
   },
-  {
-    key: "visualModels",
-    zh: "視覺圖解與表達",
-    en: "Visual Models & Representations",
-    hint: "(e.g. 十格陣 · 數線 · 實物)",
-  },
 ];
 
 export type ContentFootprintStudioProps = {
@@ -174,11 +168,9 @@ export default function ContentFootprintPanel({
   const filledCount = FIELDS.filter((field) => footprint[field.key].trim()).length;
   const qualityByField: Record<FootprintField, number> = {
     scope: analysis.quality.scope,
-    visualModels: analysis.quality.visualModels,
   };
   const feedbackByField: Record<FootprintField, string | null> = {
     scope: analysis.scopeFeedback ?? analysis.scopeQualityReason,
-    visualModels: analysis.visualFeedback ?? analysis.visualModelsQualityReason,
   };
 
   const sourceNote = difyConfigured
@@ -217,7 +209,7 @@ export default function ContentFootprintPanel({
             ready ? "bg-sky-50 text-sky-lock" : "bg-zinc-100 text-zinc-500"
           }`}
         >
-          {filledCount}/2
+          {filledCount}/1
         </span>
       </div>
 
@@ -335,13 +327,21 @@ export default function ContentFootprintPanel({
         <div className="space-y-2 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-800 ring-1 ring-red-100">
           <p>{error}</p>
           {error.includes("scope_feedback_placeholder") ||
+          error.includes("scope_and_constraints_en") ||
+          error.includes("visual_models_en") ||
+          error.includes("Structured output validation failed") ||
           error.includes("Additional properties are not allowed") ? (
             <p className="text-red-900/80">
-              Dify structured output must use exact keys{" "}
-              <code className="font-mono">scope_feedback</code> and{" "}
-              <code className="font-mono">visual_feedback</code> — not{" "}
+              Dify structured output must use exactly these keys:{" "}
+              <code className="font-mono">topic_summary</code>,{" "}
+              <code className="font-mono">scope_and_constraints</code>, ratings,{" "}
+              <code className="font-mono">scope_feedback</code>. Do not use{" "}
+              <code className="font-mono">*_en</code>,{" "}
+              <code className="font-mono">*_zh</code>, or{" "}
               <code className="font-mono">*_placeholder</code>. Update the LLM
-              schema / prompt in Textbook_Chat_Analysis, then publish again.
+              schema and system prompt in Textbook_Chat_Analysis (see{" "}
+              <code className="font-mono">docs/dify-studio-analysis-workflow.md</code>
+              ), then publish again.
             </p>
           ) : null}
         </div>
@@ -358,9 +358,7 @@ export function ContentFootprintDrawer({
 }: Omit<ContentFootprintPanelProps, "compact">) {
   const filledCount = useMemo(
     () =>
-      (["scope", "visualModels"] as const).filter((key) =>
-        footprint[key].trim(),
-      ).length,
+      footprint.scope.trim() ? 1 : 0,
     [footprint],
   );
   const [open, setOpen] = useState(false);
@@ -377,7 +375,7 @@ export function ContentFootprintDrawer({
             <span className="text-zinc-900">內容足跡</span>
             <span className="font-normal text-zinc-500"> · Content Footprint</span>
           </span>
-          <span className="text-sky-lock">{filledCount}/2</span>
+          <span className="text-sky-lock">{filledCount}/1</span>
         </button>
         {open ? (
           <div className="mt-3 rounded-3xl bg-white p-4 ring-1 ring-teal-100">

@@ -46,9 +46,9 @@ export default function ChatWelcome() {
             </p>
             <p className="mt-2 text-sm leading-6 text-zinc-500">
               This Primary 1 assistant helps you map textbook content for lesson
-              design and SpLD support. Lock the Content Footprint — scope and visual
-              models — before teaching strategies. Exercise formats belong in Step 4
-              when you design worksheets.
+              design and SpLD support. Lock the Content Footprint — topic summary
+              and scope &amp; constraints — before teaching strategies. Exercise
+              formats belong in Step 4 when you design worksheets.
             </p>
           </div>
           <div className="space-y-4">
@@ -64,20 +64,6 @@ export default function ChatWelcome() {
                 </span>{" "}
                 Exact boundaries (e.g. addition within 10 vs 18) and core vocabulary
                 the textbook uses.
-              </p>
-            </div>
-            <div>
-              <p>
-                <span className="font-semibold">視覺圖解與表達（Visual Models）：</span>{" "}
-                找出課本如何圖解抽象概念，例如是否採用了分和合（Number
-                bonds）、實物排圖或是數線。
-              </p>
-              <p className="mt-1 text-sm leading-6 text-zinc-500">
-                <span className="font-medium text-zinc-600">
-                  Visual models:
-                </span>{" "}
-                How the book represents concepts — number bonds, manipulatives,
-                number lines, and similar.
               </p>
             </div>
           </div>
@@ -101,12 +87,6 @@ export default function ChatWelcome() {
                 <p className="mt-1 text-sm text-zinc-500">
                   Scope: &quot;Up to what number does addition in Unit 5
                   cover?&quot;
-                </p>
-              </li>
-              <li>
-                <p>視覺模型：「課本用哪些圖像解釋這個概念？」</p>
-                <p className="mt-1 text-sm text-zinc-500">
-                  Models: &quot;What images or models explain this concept?&quot;
                 </p>
               </li>
             </ol>
