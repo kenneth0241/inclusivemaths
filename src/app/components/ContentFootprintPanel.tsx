@@ -183,8 +183,10 @@ export default function ContentFootprintPanel({
         en: "Local rules when Dify is off. Edit to lock a field.",
       };
 
-  const topicSummaryText =
-    footprint.topicSummary.trim() || analysis.summary?.trim() || "";
+  const liveTopicSummary = analysis.summary?.trim() ?? "";
+  const topicSummaryText = footprint.edited.topicSummary
+    ? footprint.topicSummary.trim() || liveTopicSummary
+    : liveTopicSummary || footprint.topicSummary.trim();
   const showTopicSummary =
     difyConfigured && (loading || topicSummaryText.length > 0);
 

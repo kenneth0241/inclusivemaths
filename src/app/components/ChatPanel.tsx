@@ -61,6 +61,7 @@ type ChatPanelProps = {
   onTranscriptChange?: (messages: ChatTranscriptMessage[], busy: boolean) => void;
   onTopicHint?: (topic: string) => void;
   onTopicPanelState?: (state: ChatStudioAnalysisState) => void;
+  onNewConversation?: () => void;
 };
 
 const CONVERSATION_KEY = "inclusive-maths-conversation-id";
@@ -71,6 +72,7 @@ export default function ChatPanel({
   onTranscriptChange,
   onTopicHint,
   onTopicPanelState,
+  onNewConversation,
 }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -484,6 +486,7 @@ export default function ChatPanel({
     setTopicAnalysisError("");
     setTopicAnalysisLoading(false);
     setError("");
+    onNewConversation?.();
   }
 
   function copySuggestionToInput(question: string) {

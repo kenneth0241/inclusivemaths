@@ -113,9 +113,6 @@ export default function ChatStudio() {
         if (current.footprint.edited.topicSummary) {
           return current;
         }
-        if (current.footprint.topicSummary === summary) {
-          return current;
-        }
         return {
           ...current,
           footprint: {
@@ -190,6 +187,23 @@ export default function ChatStudio() {
             onTranscriptChange={applyTranscript}
             onTopicHint={handleTopicHint}
             onTopicPanelState={setStudioAnalysis}
+            onNewConversation={() => {
+              setDraft((current) => {
+                if (current.footprint.edited.topicSummary) {
+                  return current;
+                }
+                if (!current.footprint.topicSummary.trim()) {
+                  return current;
+                }
+                return {
+                  ...current,
+                  footprint: {
+                    ...current.footprint,
+                    topicSummary: "",
+                  },
+                };
+              });
+            }}
           />
         </div>
         <aside className="md:col-span-5 md:sticky md:top-4 md:self-start">

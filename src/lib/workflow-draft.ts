@@ -549,7 +549,7 @@ export function saveWorkflowDraft(draft: WorkflowDraft) {
   sessionStorage.setItem(LESSON_PLAN_DRAFT_KEY, JSON.stringify(lessonForm));
 }
 
-/** Empty scope / visual models when opening Step 1 chat (topic summary unchanged). */
+/** Reset auto-filled footprint when opening Step 1 chat (keep teacher-locked fields). */
 export function withClearedChatFootprintFields(draft: WorkflowDraft): WorkflowDraft {
   return {
     ...draft,
@@ -557,6 +557,9 @@ export function withClearedChatFootprintFields(draft: WorkflowDraft): WorkflowDr
       ...draft.footprint,
       scope: "",
       visualModels: "",
+      topicSummary: draft.footprint.edited.topicSummary
+        ? draft.footprint.topicSummary
+        : "",
       edited: {
         ...draft.footprint.edited,
         scope: false,
