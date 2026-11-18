@@ -192,6 +192,25 @@ export function createGameChatflowTransform(): TransformStream<
         }
 
         if (eventName === "workflow_finished" || eventName === "node_finished") {
+          const data = asRecord(event.data);
+          if (
+            eventName === "workflow_finished" &&
+            data?.status === "failed"
+          ) {
+            const workflowError =
+              typeof data.error === "string" && data.error.trim()
+                ? data.error.trim()
+                : "Dify workflow failed.";
+            controller.enqueue(
+              sseDataLine({
+                event: "message",
+                answer: workflowError,
+              }),
+            );
+            controller.enqueue(
+              sseDataLine({ event: "workflow_error", error: workflowError }),
+            );
+          }
           const outputs = extractOutputsFromChatEvent(event);
           if (outputs) {
             emitStructured(outputs);

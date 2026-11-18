@@ -106,10 +106,18 @@ export async function consumeGameChatStream(
           conversation_id?: string;
           chat_reply?: string;
           html_code?: string;
+          error?: string;
         };
         if (event.conversation_id) {
           conversationId = String(event.conversation_id);
           handlers?.onConversationId?.(conversationId);
+        }
+        if (event.event === "workflow_error") {
+          const err =
+            typeof event.error === "string" && event.error.trim()
+              ? event.error.trim()
+              : "Dify workflow failed.";
+          throw new Error(err);
         }
         if (event.event === "game_structured") {
           const reply = event.chat_reply?.trim() ?? "";

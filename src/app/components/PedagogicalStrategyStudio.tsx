@@ -1,12 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  buildPedagogyDemoDraft,
-  buildPedagogyDemoPedagogyState,
-  clearPedagogyChatSession,
-  shouldAutoLoadPedagogyDemo,
-} from "@/lib/pedagogy-demo-fixture";
+import { clearPedagogyRefineSession } from "@/lib/pedagogy-refine-session";
 import {
   formatPedagogyStepsContext,
   formatStudentRefineSeedMarkdown,
@@ -47,9 +42,7 @@ export default function PedagogicalStrategyStudio() {
     boolean | null
   >(null);
   const [deployHint, setDeployHint] = useState<"local" | "vercel">("local");
-  const demoAutoLoaded = useRef(false);
   const baselineRunFp = useRef<string | null>(null);
-  const [demoLoadNonce, setDemoLoadNonce] = useState(0);
 
   const canUse =
     hydrated &&
@@ -170,7 +163,7 @@ export default function PedagogicalStrategyStudio() {
     if (!stored || stored === inputFingerprint) {
       return;
     }
-    clearPedagogyChatSession();
+    clearPedagogyRefineSession();
     resetPedagogyOutputs();
   }, [
     hydrated,
@@ -195,7 +188,6 @@ export default function PedagogicalStrategyStudio() {
     draft.pedagogy.lastInputFingerprint,
     draft.pedagogy.udl,
     draft.pedagogy.individualized.length,
-    demoLoadNonce,
     runBaseline,
   ]);
 
@@ -227,35 +219,6 @@ export default function PedagogicalStrategyStudio() {
       cancelled = true;
     };
   }, []);
-
-  function loadDemoContext() {
-    clearPedagogyChatSession();
-    setRefineTarget(null);
-    setBaselineError("");
-    baselineRunFp.current = null;
-    setDemoLoadNonce((nonce) => nonce + 1);
-    setDraft((current) => {
-      const next = buildPedagogyDemoDraft(current);
-      if (workflowConfigured === false) {
-        return {
-          ...next,
-          pedagogy: buildPedagogyDemoPedagogyState(
-            next.footprint,
-            next.learner,
-          ),
-        };
-      }
-      return next;
-    });
-  }
-
-  useEffect(() => {
-    if (!hydrated || demoAutoLoaded.current || !shouldAutoLoadPedagogyDemo()) {
-      return;
-    }
-    demoAutoLoaded.current = true;
-    loadDemoContext();
-  }, [hydrated]);
 
   function handleRefineStructured(
     payload: PedagogyStructuredPayload,
@@ -357,24 +320,6 @@ export default function PedagogicalStrategyStudio() {
             en="Complete Step 1 and Step 2 Profile Synthesizer first."
             enClassName="text-amber-900/85"
           />
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <button
-              type="button"
-              onClick={loadDemoContext}
-              className="rounded-full bg-amber-100 px-4 py-2 text-xs font-semibold text-amber-950 ring-1 ring-amber-300 transition hover:bg-amber-200"
-            >
-              <BilingualStack
-                zh="載入示範 Step 1–2 並自動執行 Step 3 分析"
-                en="Load demo Steps 1–2 and auto-run Step 3 analysis"
-                layout="auto"
-              />
-            </button>
-            <span className="text-xs text-amber-900/75">
-              <code className="rounded bg-amber-100/80 px-1 font-mono">
-                /design/pedagogy?demo=1
-              </code>
-            </span>
-          </div>
         </div>
       ) : null}
 
@@ -385,24 +330,6 @@ export default function PedagogicalStrategyStudio() {
           subZh="整合 Step 1 內容足跡與 Step 2 學習者檔案"
           subEn="Combining Step 1 footprint with Step 2 learner profiles"
         />
-      ) : null}
-
-      {canUse && hydrated ? (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <button
-            type="button"
-            disabled={baselineLoading}
-            onClick={loadDemoContext}
-            className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-950 ring-1 ring-amber-200 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <BilingualStack
-              zh="載入／重設示範資料"
-              en="Load / reset demo data"
-              layout="auto"
-            />
-          </button>
-          <code className="text-[11px] text-zinc-500">?demo=1</code>
-        </div>
       ) : null}
 
       <div className="grid w-full gap-5 lg:grid-cols-[3fr_2fr] lg:items-start">

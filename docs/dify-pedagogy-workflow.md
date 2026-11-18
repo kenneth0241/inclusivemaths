@@ -8,15 +8,6 @@ Use with **`DIFY_APP_PEDAGOGY_API_KEY`** and **`DIFY_APP_PEDAGOGY_APP_MODE=workf
 2. **Refine** — teacher opens drawer for **UDL** or one **student**; Step 1–2 context + current analysis seed the chat; follow-ups use `POST /api/pedagogy-chat`.
 3. **UDL refine** uses the main pedagogy app. **Student refine** uses the individual app — see [`docs/dify-pedagogy-individual-refine.md`](dify-pedagogy-individual-refine.md).
 
-## Local testing without Step 1–2
-
-On **`/design/pedagogy`**:
-
-- Click **載入示範資料 · Load demo data**, or
-- Open **`/design/pedagogy?demo=1`** (auto-loads).
-
-This fills Step 1–2 only, then **auto-runs Step 3 baseline** (same as arriving from real Steps 1–2). Requires workflow configured unless analysis errors (use refine drawer to retry).
-
 The site calls **`POST /api/pedagogy-strategy`** (baseline) or **`POST /api/pedagogy-chat`** (refine) → Dify `POST /workflows/run` (blocking), then maps workflow outputs into the Step 3 workspace (**教育理論** / **支援策略** / **調適模式**).
 
 ## Start inputs (baseline)

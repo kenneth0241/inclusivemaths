@@ -38,6 +38,15 @@ export type GameDifyStartInputs = {
   current_code: string;
 };
 
+/** UDL whole-class game chatflow — uses Step 3 UDL field names (not per-learner theory keys). */
+export type GameUdlDifyStartInputs = Omit<
+  GameDifyStartInputs,
+  "educational_theory" | "learning_strategies" | "applied_modes"
+> & {
+  educational_theory_udl: string;
+  learning_strategies_udl: string;
+};
+
 export function gameScopeAndConstraints(footprint: ContentFootprint): string {
   return footprint.scope.trim();
 }
@@ -48,8 +57,10 @@ export function buildGameUdlDifyInputs(input: {
   parameters: GameParameters;
   pedagogy: PedagogicalStrategyState;
   currentCode: string;
-}): GameDifyStartInputs {
+}): GameUdlDifyStartInputs {
   const classNote = input.learner.classProfile.trim();
+  const theory = pedagogyTheoryForGame(null, input.pedagogy);
+  const strategies = pedagogyStrategiesForGame(null, input.pedagogy);
   return {
     student_name: UDL_GAME_TAB_LABEL,
     topic_summary: input.footprint.topicSummary.trim(),
@@ -57,9 +68,8 @@ export function buildGameUdlDifyInputs(input: {
     student_bottleneck: classNote
       ? `Class profile · 班級概況:\n${classNote}`
       : "全班通用 UDL · Whole-class Universal Design for Learning (no individual bottleneck).",
-    educational_theory: pedagogyTheoryForGame(null, input.pedagogy),
-    learning_strategies: pedagogyStrategiesForGame(null, input.pedagogy),
-    applied_modes: "UDL (class-wide · 全班)",
+    educational_theory_udl: theory,
+    learning_strategies_udl: strategies,
     game_rules: input.parameters.gameRules.trim(),
     scoring_method: input.parameters.scoringMethod.trim(),
     ui_style: input.parameters.uiStyle.trim(),

@@ -577,6 +577,7 @@ export default function ChatPanel({
                       content={message.content}
                       isStreaming={streamingAssistantId === message.id}
                       citations={message.citations}
+                      useMarkdown
                     />
                   ) : (
                     <p className="whitespace-pre-wrap leading-normal">

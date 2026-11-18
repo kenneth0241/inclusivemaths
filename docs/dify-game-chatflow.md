@@ -96,13 +96,15 @@ Implementation: `buildGameDifyInputs()` and `buildGameUdlDifyInputs()` in `src/l
 
 ## UDL chatflow Start inputs
 
-Same keys as the per-learner app. Typical values from the app:
+Uses **UDL-specific** theory/strategy keys (Step 3 `part_1_udl`), not the per-learner `educational_theory` / `learning_strategies`:
 
 | Key | UDL app value |
 |-----|----------------|
 | `student_name` | `UDL · 全班` |
+| `topic_summary`, `scope_and_constraints` | Step 1 footprint |
 | `student_bottleneck` | Class profile text, or a whole-class UDL placeholder |
-| `educational_theory` | Step 3 UDL theory (`part_1_udl` or flattened class theory) |
-| `learning_strategies` | Step 3 UDL strategies |
-| `applied_modes` | `UDL (class-wide · 全班)` |
-| `individualized_row` | *(not sent — use the UDL API only)* |
+| `educational_theory_udl` | Step 3 UDL education theory (zh/en) |
+| `learning_strategies_udl` | Step 3 UDL learning strategies (zh/en) |
+| `game_rules`, `scoring_method`, `ui_style`, `current_code` | Step 4 parameters / follow-up HTML |
+
+Per-learner chatflow keeps `educational_theory`, `learning_strategies`, and `applied_modes` from individualized rows.
