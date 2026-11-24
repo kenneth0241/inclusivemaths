@@ -1,10 +1,34 @@
 [
-  { "id": "01", "name": "Au Yeung Chun (歐陽俊)", "class": "1A" },
-  { "id": "02", "name": "Chan Mei Ling (陳美玲)", "class": "1A" },
-  { "id": "03", "name": "Cheung Ka Ho (張家豪)", "class": "1A" },
-  { "id": "04", "name": "Chow Tsz Ching (周芷晴)", "class": "1A" },
-  { "id": "05", "name": "Ho Yuet Yee (何悅兒)", "class": "1A" },
-  { "id": "06", "name": "Kwok Chi Kin (郭志健)", "class": "1A" },
+  {
+    "id": "01",
+    "name": "Au Yeung Chun (歐陽俊)",
+    "class": "1A"
+  },
+  {
+    "id": "02",
+    "name": "Chan Mei Ling (陳美玲)",
+    "class": "1A"
+  },
+  {
+    "id": "03",
+    "name": "Cheung Ka Ho (張家豪)",
+    "class": "1A"
+  },
+  {
+    "id": "04",
+    "name": "Chow Tsz Ching (周芷晴)",
+    "class": "1A"
+  },
+  {
+    "id": "05",
+    "name": "Ho Yuet Yee (何悅兒)",
+    "class": "1A"
+  },
+  {
+    "id": "06",
+    "name": "Kwok Chi Kin (郭志健)",
+    "class": "1A"
+  },
   {
     "id": "07",
     "name": "Lam Wing Yan (林穎欣)",
@@ -85,12 +109,36 @@
       }
     }
   },
-  { "id": "11", "name": "Mak Tsz Kiu (麥子翹)", "class": "1B" },
-  { "id": "12", "name": "Ng Hoi Ching (吳凱晴)", "class": "1B" },
-  { "id": "13", "name": "Poon Yat Long (潘溢朗)", "class": "1B" },
-  { "id": "14", "name": "Sin Nga Man (冼雅雯)", "class": "1B" },
-  { "id": "15", "name": "Tam Cheuk Ying (譚卓瀅)", "class": "1B" },
-  { "id": "16", "name": "Wong Tsz Yau (黃芷悠)", "class": "1B" },
+  {
+    "id": "11",
+    "name": "Mak Tsz Kiu (麥子翹)",
+    "class": "1B"
+  },
+  {
+    "id": "12",
+    "name": "Ng Hoi Ching (吳凱晴)",
+    "class": "1B"
+  },
+  {
+    "id": "13",
+    "name": "Poon Yat Long (潘溢朗)",
+    "class": "1B"
+  },
+  {
+    "id": "14",
+    "name": "Sin Nga Man (冼雅雯)",
+    "class": "1B"
+  },
+  {
+    "id": "15",
+    "name": "Tam Cheuk Ying (譚卓瀅)",
+    "class": "1B"
+  },
+  {
+    "id": "16",
+    "name": "Wong Tsz Yau (黃芷悠)",
+    "class": "1B"
+  },
   {
     "id": "17",
     "name": "Yip Ho Yin (葉浩然)",
@@ -168,6 +216,126 @@
       "social_behavioral_adjustment": {
         "tier_1_support": "Give warning 5 minutes before transitioning to a new activity. Keep group work roles highly structured. / 轉換活動前5分鐘給予預告。保持小組工作的角色具高度結構性。",
         "tier_2_and_3_support": "Social skills training group. / 社交技巧訓練小組。"
+      }
+    }
+  },
+  {
+    "id": "22",
+    "name": "Cheung Lok Yi (張樂怡)",
+    "class": "1C",
+    "sen_type": "Specific Learning Difficulties (SpLD) - Dyslexia",
+    "current_performance": {
+      "strengths_and_interests": "Highly imaginative, strong in visual arts; good at direct single-step calculations. / 富有想像力，視覺藝術能力強；擅長直接計算單一步驟算題。",
+      "weaknesses": "Weak working memory, struggling to hold multiple calculation steps in mind; easily overwhelmed by multi-sentence text problems. / 工作記憶較弱，難以在腦中同時處理多個計算步驟；面對多句組成的文字題容易失去方向。"
+    },
+    "domains": {
+      "learning_adjustment": {
+        "tier_1_support": "Use clear visual flowcharts (step-by-step checklists) to demonstrate problem-solving; reduce question density per worksheet page with ample white space. / 運用步驟分明的視覺流程圖（例如分步清單）展示解題過程；每頁工作紙減少題目密度，留白清晰。",
+        "tier_2_and_3_support": "Apply Chunking by displaying only one calculation step at a time before revealing the next; provide grid scratch paper to record intermediate steps and reduce memory load. / 採用「分段學習法 (Chunking)」，每次只呈現一個計算步驟，完成後再顯示下一步；提供草稿方格紙協助記錄中間算式，減輕記憶負荷。"
+      },
+      "social_behavioral_adjustment": {
+        "tier_1_support": "Seat her near the front-center for close teacher monitoring; provide immediate verbal encouragement when she loses track to prevent giving up, and allow her to sketch her thought process. / 安排坐在課室前排中央以方便老師觀察進度；在她因忘記步驟而想放棄時，給予即時口頭鼓勵，並容許她以繪畫方式表達解題思路。",
+        "tier_2_and_3_support": ""
+      }
+    }
+  },
+  {
+    "id": "23",
+    "name": "Wong Ho Yin (黃浩然)",
+    "class": "1C",
+    "sen_type": "Attention Deficit / Hyperactivity Disorder (AD/HD)",
+    "current_performance": {
+      "strengths_and_interests": "Very active, good at sports; strong spatial reasoning and motivated by score-based challenges. / 非常活躍，擅長體育運動；空間推理能力強，喜歡計分挑戰。",
+      "weaknesses": "Impulsive when answering and easily distracted by cluttered layouts; frequently overlooks symbols or skips steps during calculation. / 作答較衝動，容易被版面雜亂的資訊分散注意力；計算時經常看漏符號或數漏步驟。"
+    },
+    "domains": {
+      "learning_adjustment": {
+        "tier_1_support": "Use clean, distraction-free layouts with oversized, color-coded operation symbols (+, -); keep classroom instructions brief, giving only 1–2 steps at a time. / 採用簡潔、低干擾的教材版面，並放大及以鮮明顏色標示運算符號（+、-）；課堂指令簡短直接，每次只給予一至兩個步驟。",
+        "tier_2_and_3_support": "Break exercises into short micro-tasks (e.g., immediate feedback or mini-break every 3 questions); provide a \"Check-the-Sign\" checklist reminding him to circle symbols before solving. / 將練習切分為短時段的小任務（如每完成 3 題小休或獲即時回饋）；提供「審題檢查表」提醒他先圈出符號再作答。"
+      },
+      "social_behavioral_adjustment": {
+        "tier_1_support": "Seat him away from windows and doors to minimize distractions; use an immediate positive reinforcement system (points/stickers) for on-task behavior, and assign brief movement tasks (e.g., distributing manipulatives) to channel energy constructively. / 安排遠離窗邊及門口的位置以減少外界干擾；運用即時正向獎勵制度（如積分或貼紙）強化專注行為，並安排短暫的課堂小任務（如派發教具）讓他合法釋放精力。",
+        "tier_2_and_3_support": ""
+      }
+    }
+  },
+  {
+    "id": "24",
+    "name": "Lee Sze Wing (李思穎)",
+    "class": "1C",
+    "sen_type": "Specific Learning Difficulties (SpLD) - Dyslexia",
+    "current_performance": {
+      "strengths_and_interests": "Good at science experiments, highly sociable, strong auditory memory. / 擅長科學實驗，樂於社交，聽覺記憶力強。",
+      "weaknesses": "Weak visual discrimination, often confusing similar-looking digits or reversing place values; relies on concrete visuals to grasp abstract quantities. / 視覺辨識較弱，容易混淆形狀相似的數字或將兩位數的數位倒轉；需要具體圖像輔助才能理解抽象數量。"
+    },
+    "domains": {
+      "learning_adjustment": {
+        "tier_1_support": "Use high-contrast, large, non-mirror sans-serif fonts; pair abstract numbers with concrete manipulatives and pictorial icons (CPA approach). / 採用高對比、大字體及不易混淆的無襯線字型；結合具體教具（如數粒、積木）與圖像（CPA 模式）展示抽象數量。",
+        "tier_2_and_3_support": "Provide color-coded Tens/Ones place-value mats to prevent digit reversal; reduce copying demands by using multiple-choice (MCQ) or oral responses, leveraging her auditory memory with math rhymes/chants. / 提供「十位／個位」顏色分欄表以防數位倒轉；減少抄寫要求，改以選擇題（MCQ）或口頭作答，善用其聽覺記憶優勢配合口訣學習。"
+      },
+      "social_behavioral_adjustment": {
+        "tier_1_support": "Leverage her sociability through collaborative group problem-solving where she can verbalize concepts; avoid harsh red-pen markings and gently prompt her to self-check digit orientation. / 善用她樂於社交的特質，安排小組合作解題活動，讓她透過口頭討論鞏固概念；老師批改時避免只用紅筆圈錯，改以溫和提示引導她自我檢查數字方向。",
+        "tier_2_and_3_support": ""
+      }
+    }
+  },
+  {
+    "id": "25",
+    "name": "Ho Pak Yu (何柏宇)",
+    "class": "1C",
+    "sen_type": "Autism Spectrum Disorder (ASD)",
+    "current_performance": {
+      "strengths_and_interests": "Clear logical thinking, sensitive to number patterns and sequences, strong memory. / 邏輯思維清晰，對數字規律及排序敏感，記憶力出眾。",
+      "weaknesses": "Prefers predictable question formats and struggles with abstract story contexts; countdown timers or harsh error prompts easily trigger anxiety. / 偏好固定及可預測的題目格式，較難理解抽象情境故事；面對倒數計時或嚴厲的錯誤提示容易產生焦慮。"
+    },
+    "domains": {
+      "learning_adjustment": {
+        "tier_1_support": "Maintain highly consistent, predictable lesson routines and worksheet layouts; use literal, direct language instead of metaphors or complex story contexts. / 保持課堂流程與教材排版高度一致及可預測；以清晰、直白的語言取代隱喻或複雜的情境故事。",
+        "tier_2_and_3_support": "Remove countdown timers and harsh error sounds/red \"X\"s in digital tools and tests, replacing them with neutral, encouraging prompts; provide structured worked examples in advance before introducing new question formats. / 學習軟件及測驗中移除倒數計時器與嚴厲的錯誤音效／紅交叉，改用中性鼓勵提示；在引入新題型前，先提供結構化的例題作預告。"
+      },
+      "social_behavioral_adjustment": {
+        "tier_1_support": "Give advance notice of any routine changes and provide a designated \"calm-down corner\" for emotional regulation; assign him a clear, predictable role in group work (e.g., checking number patterns) to reduce social ambiguity. / 預先告知課堂轉變（如轉組或新活動），並設立課室「冷靜角」供情緒緊張時短暫調節；小組活動中明確分配他的固定角色（如負責核對答案規律），減少社交不確定性。",
+        "tier_2_and_3_support": ""
+      }
+    }
+  },
+  {
+    "id": "26",
+    "name": "Ng Tsz Ching (吳芷晴)",
+    "class": "1C",
+    "sen_type": "Speech and Language Impairment (SLI)",
+    "current_performance": {
+      "strengths_and_interests": "Keen observer, excels at visual matching and categorization; diligent learner. / 觀察力敏銳，擅長圖像配對及分類；學習態度認真。",
+      "weaknesses": "Limited vocabulary, struggling with long sentences and comparative math terms; needs visual support to translate verbal descriptions into equations. / 詞彙量有限，理解長句及比較類數學詞彙有困難；需要圖像輔助才能將文字描述轉化為算式。"
+    },
+    "domains": {
+      "learning_adjustment": {
+        "tier_1_support": "Speak at a measured pace and pair comparative math terms (e.g., \"more than\", \"fewer than\") with side-by-side visual icons; use simple subject-verb-object (SVO) sentences. / 教學時放慢語速，將比較類詞彙（如「多於」、「少於」）配合具體圖示並列呈現；板書及教材採用簡短主謂賓（SVO）句式。",
+        "tier_2_and_3_support": "Provide an illustrated \"Math Vocabulary Bank\"; pre-teach core math terms before lessons, and allow image-matching or tap-to-select options instead of written verbal explanations. / 提供圖文對照的「數學詞彙表」；課前預習核心數學詞彙，練習時容許以配對圖像或點選選項取代書寫文字解釋。"
+      },
+      "social_behavioral_adjustment": {
+        "tier_1_support": "Provide extended wait time after asking questions without rushing or interrupting; encourage participation through gestures, pointing to visuals, or short phrases, and consistently affirm her diligence. / 提問後給予額外的思考與回應時間（Wait Time），不催促或打斷她的表達；鼓勵她以手勢、指認圖像或簡短詞語參與課堂互動，並肯定她的認真態度。",
+        "tier_2_and_3_support": ""
+      }
+    }
+  },
+  {
+    "id": "21",
+    "name": "Chan Tsz Hin (陳子軒)",
+    "class": "1C",
+    "sen_type": "Specific Learning Difficulties (SpLD) - Dyslexia",
+    "current_performance": {
+      "strengths_and_interests": "Excellent at rote counting and simple mental math; enjoys drawing and building blocks. / 擅長唱數及簡單心算；喜歡畫畫及砌積木。",
+      "weaknesses": "Low reading fluency with frequent word omissions; difficulty identifying mathematical keywords in word problems. / 閱讀流暢度不足，讀題時經常漏字；難以辨識應用題中的數學關鍵詞。"
+    },
+    "domains": {
+      "learning_adjustment": {
+        "tier_1_support": "Use short sentence structures in class materials with color-coded math keywords; provide visual aids to support comprehension. / 課堂教材採用簡短句式，並以不同顏色標示數學關鍵詞（如加、減詞彙）；提供圖像輔助理解題意。",
+        "tier_2_and_3_support": "Provide text-to-speech/read-aloud support and a \"Keyword Cue Card\"; offer extra time and read-aloud accommodations during assessments, breaking long word problems into short clauses. / 提供讀屏／語音讀題支援及「關鍵詞提示卡」；測考時給予加時及讀題安排，並將長應用題拆分為短句。"
+      },
+      "social_behavioral_adjustment": {
+        "tier_1_support": "Avoid asking him to read long word problems aloud in front of the class to prevent frustration; pair him with a supportive reading buddy and praise his mental math speed and drawing talent to build confidence. / 避免要求他在全班面前朗讀長文字題目以減少挫敗感；安排與樂於助人的同儕作伴讀，並多讚賞他的心算速度與繪畫天份以建立自信。",
+        "tier_2_and_3_support": ""
       }
     }
   }
