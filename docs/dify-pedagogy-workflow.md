@@ -78,6 +78,8 @@ Root JSON object (Structured Output schema):
 | `learning_strategies_zh` / `learning_strategies_en` | 支援策略 |
 | `applied_modes` | 調適模式 — array of `{ "mode": "Simplify Mode" \| "Chunking" \| "Visual Mode", "intensity_level": "High" \| "Medium" \| "Low" }` |
 
+JSON Schema for Dify **Structured output** on the baseline LLM node — copy from [`pedagogy-structured-output.schema.json`](./pedagogy-structured-output.schema.json). Both `part_1_udl` and `part_2_individualized` are **required** at the root (use `"part_2_individualized": []` when there are no rows yet).
+
 Example (minimal valid JSON):
 
 ```json

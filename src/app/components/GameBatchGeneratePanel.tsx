@@ -64,7 +64,7 @@ export default function GameBatchGeneratePanel({
   generationPrompt = DEFAULT_GAME_GENERATION_PROMPT,
 }: GameBatchGeneratePanelProps) {
   const [busy, setBusy] = useState(false);
-  const [progressIndex, setProgressIndex] = useState(-1);
+  const [progressDone, setProgressDone] = useState(0);
   const [failures, setFailures] = useState<BatchFailure[]>([]);
 
   const includeUdl = hasClassUdlForGames(pedagogy);
@@ -106,17 +106,19 @@ export default function GameBatchGeneratePanel({
 
     setBusy(true);
     setFailures([]);
-    setProgressIndex(0);
+    setProgressDone(0);
 
-    const nextMap: LearnerGamesMap = { ...learnerGames };
-    const failed: BatchFailure[] = [];
+  type StepSuccess = {
+    ok: true;
+    slotId: string;
+    slot: LearnerGamesMap[string];
+  };
+  type StepFailure = { ok: false; failure: BatchFailure };
 
-    for (let stepIndex = 0; stepIndex < batchSteps.length; stepIndex += 1) {
-      const step = batchSteps[stepIndex]!;
-      setProgressIndex(stepIndex);
-
-      if (step.kind === "udl") {
-        try {
+  const outcomes = await Promise.allSettled(
+    batchSteps.map(async (step): Promise<StepSuccess | StepFailure> => {
+      try {
+        if (step.kind === "udl") {
           const result = await runGameUdlChatTurn({
             query: generationPrompt,
             footprint,
@@ -125,34 +127,23 @@ export default function GameBatchGeneratePanel({
             game_parameters: parameters,
             current_code: "",
           });
-
           const messages = gameChatTurnMessages(
             generationPrompt,
             result.assistantText,
           );
-
-          nextMap[UDL_GAME_TARGET_ID] = {
-            html: result.html ?? "",
-            conversationId: result.conversationId,
-            messages,
+          return {
+            ok: true,
+            slotId: UDL_GAME_TARGET_ID,
+            slot: {
+              html: result.html ?? "",
+              conversationId: result.conversationId,
+              messages,
+            },
           };
-          onLearnerGames(nextMap);
-        } catch (error) {
-          failed.push({
-            studentId: UDL_GAME_TARGET_ID,
-            name: UDL_GAME_TAB_LABEL,
-            message:
-              error instanceof Error ? error.message : "Generation failed.",
-          });
-          setFailures([...failed]);
         }
-        continue;
-      }
 
-      const student = step.student;
-      const row = findPedagogyRowForStudent(pedagogy, student, step.index);
-
-      try {
+        const student = step.student;
+        const row = findPedagogyRowForStudent(pedagogy, student, step.index);
         const result = await runGameChatTurn({
           query: generationPrompt,
           student_id: student.id,
@@ -163,34 +154,65 @@ export default function GameBatchGeneratePanel({
           individualized_row: row,
           current_code: "",
         });
-
         const messages = gameChatTurnMessages(
           generationPrompt,
           result.assistantText,
         );
-
-        nextMap[student.id] = {
-          html: result.html ?? "",
-          conversationId: result.conversationId,
-          messages,
+        return {
+          ok: true,
+          slotId: student.id,
+          slot: {
+            html: result.html ?? "",
+            conversationId: result.conversationId,
+            messages,
+          },
         };
-        onLearnerGames(nextMap);
       } catch (error) {
-        failed.push({
-          studentId: student.id,
-          name: student.name,
-          message: error instanceof Error ? error.message : "Generation failed.",
-        });
-        setFailures([...failed]);
+        if (step.kind === "udl") {
+          return {
+            ok: false,
+            failure: {
+              studentId: UDL_GAME_TARGET_ID,
+              name: UDL_GAME_TAB_LABEL,
+              message:
+                error instanceof Error ? error.message : "Generation failed.",
+            },
+          };
+        }
+        return {
+          ok: false,
+          failure: {
+            studentId: step.student.id,
+            name: step.student.name,
+            message:
+              error instanceof Error ? error.message : "Generation failed.",
+          },
+        };
+      } finally {
+        setProgressDone((n) => n + 1);
       }
+    }),
+  );
+
+    const nextMap: LearnerGamesMap = { ...learnerGames };
+    const failed: BatchFailure[] = [];
+    for (const settled of outcomes) {
+      if (settled.status !== "fulfilled") {
+        continue;
+      }
+      const value = settled.value;
+      if (!value.ok) {
+        failed.push(value.failure);
+        continue;
+      }
+      nextMap[value.slotId] = value.slot;
     }
 
-    setProgressIndex(-1);
+    onLearnerGames(nextMap);
+    setFailures(failed);
+    setProgressDone(0);
     setBusy(false);
   }
-
-  const progressStep =
-    progressIndex >= 0 ? batchSteps[progressIndex] : null;
 
   const learnerCount = gameTargetStudentIds.length;
   const udlCount = includeUdl ? 1 : 0;
@@ -213,8 +235,8 @@ export default function GameBatchGeneratePanel({
           <p className="mt-1 text-xs leading-5 text-zinc-600">
             <BilingualStack
               layout="stack"
-              zh="先選定遊戲對象並填寫遊戲參數，再按下生成。會先為全班 UDL 生成一局，再依序為每位勾選的學習者各呼叫一次 Dify。"
-              en="Select targets and parameters, then generate. Runs one UDL (whole-class) game first, then one Dify request per selected learner."
+              zh="先選定遊戲對象並填寫遊戲參數，再按下生成。UDL 與每位學習者會平行呼叫 Dify（同時進行）。"
+              en="Select targets and parameters, then generate — UDL and each learner are requested from Dify in parallel."
               enClassName="text-zinc-500"
             />
           </p>
@@ -314,20 +336,12 @@ export default function GameBatchGeneratePanel({
         </button>
       </div>
 
-      {busy && progressStep ? (
+      {busy ? (
         <p className="mt-3 text-xs text-teal-950" role="status" aria-live="polite">
           <BilingualStack
             layout="inline"
-            zh={`正在生成（${progressIndex + 1}/${batchSteps.length}）：${
-              progressStep.kind === "udl"
-                ? progressStep.label
-                : progressStep.student.name
-            }…`}
-            en={`Generating (${progressIndex + 1}/${batchSteps.length}): ${
-              progressStep.kind === "udl"
-                ? progressStep.label
-                : progressStep.student.name
-            }…`}
+            zh={`平行生成中：已完成 ${progressDone}/${batchSteps.length} 次請求…`}
+            en={`Generating in parallel: ${progressDone}/${batchSteps.length} request(s) finished…`}
             enClassName="text-teal-900/80"
           />
         </p>

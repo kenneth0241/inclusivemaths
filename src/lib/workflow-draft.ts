@@ -14,11 +14,18 @@ import {
   normalizeGameParameters,
   type GameParameters,
 } from "@/lib/game-parameters";
-import { normalizeGameTargetStudentIds } from "@/lib/game-targets";
+import {
+  normalizeGameTargetStudentIds,
+  normalizeWorksheetTargetStudentIds,
+} from "@/lib/game-targets";
 import {
   normalizeLearnerGames,
   type LearnerGamesMap,
 } from "@/lib/game-learner-state";
+import {
+  normalizeLearnerWorksheets,
+  type LearnerWorksheetsMap,
+} from "@/lib/worksheet-learner-state";
 import {
   formatAppliedModesList,
   normalizePedagogyAppliedModes,
@@ -59,6 +66,7 @@ export type WorkflowLesson = LessonPlanFormValues & {
 };
 
 export type WorkflowAssets = {
+  /** Legacy single worksheet; mirrored from first target when present. */
   worksheetMarkdown: string;
   /** Legacy single-game HTML; mirrored from first target when present. */
   gameHtml: string;
@@ -67,9 +75,17 @@ export type WorkflowAssets = {
   gameTargetStudentIds: string[];
   /** Per-student game HTML, Dify chat, and preview state. */
   learnerGames: LearnerGamesMap;
+  /** Subset of Step 2 learners for Step 4.2 worksheets. */
+  worksheetTargetStudentIds: string[];
+  /** Per-target worksheet markdown and parameters. */
+  learnerWorksheets: LearnerWorksheetsMap;
 };
 
 export type { GameLearnerSlot, GameChatMessage, LearnerGamesMap } from "@/lib/game-learner-state";
+export type {
+  WorksheetLearnerSlot,
+  LearnerWorksheetsMap,
+} from "@/lib/worksheet-learner-state";
 
 export type { GameParameters };
 
@@ -169,6 +185,8 @@ export const DEFAULT_WORKFLOW_DRAFT: WorkflowDraft = {
     gameParameters: { ...DEFAULT_GAME_PARAMETERS },
     gameTargetStudentIds: [],
     learnerGames: {},
+    worksheetTargetStudentIds: [],
+    learnerWorksheets: {},
   },
 };
 
@@ -494,27 +512,49 @@ export function parseWorkflowDraft(raw: unknown): WorkflowDraft {
       : undefined,
     learner.studentIds,
   );
+  const worksheetTargetStudentIds = normalizeWorksheetTargetStudentIds(
+    "worksheetTargetStudentIds" in assets
+      ? assets.worksheetTargetStudentIds
+      : gameTargetStudentIds.length > 0
+        ? assets.gameTargetStudentIds
+        : undefined,
+    learner.studentIds,
+  );
   const legacyGameHtml = asString(assets.gameHtml);
+  const legacyWorksheetMarkdown = asString(assets.worksheetMarkdown);
   const learnerGames = normalizeLearnerGames(
     assets.learnerGames,
     gameTargetStudentIds,
     legacyGameHtml,
   );
+  const learnerWorksheets = normalizeLearnerWorksheets(
+    assets.learnerWorksheets,
+    worksheetTargetStudentIds,
+    legacyWorksheetMarkdown,
+    new Map(),
+  );
   const firstHtml =
     gameTargetStudentIds.length > 0
       ? learnerGames[gameTargetStudentIds[0]!]?.html ?? legacyGameHtml
       : legacyGameHtml;
+  const firstWorksheet =
+    worksheetTargetStudentIds.length > 0
+      ? learnerWorksheets[worksheetTargetStudentIds[0]!]?.markdown ??
+        legacyWorksheetMarkdown
+      : legacyWorksheetMarkdown;
   return {
     footprint: parseFootprint(raw.footprint),
     learner,
     pedagogy: parsePedagogy(raw.pedagogy),
     lesson: parseLesson(raw.lesson),
     assets: {
-      worksheetMarkdown: asString(assets.worksheetMarkdown),
+      worksheetMarkdown: firstWorksheet || legacyWorksheetMarkdown,
       gameHtml: firstHtml || legacyGameHtml,
       gameParameters: normalizeGameParameters(assets.gameParameters),
       gameTargetStudentIds,
       learnerGames,
+      worksheetTargetStudentIds,
+      learnerWorksheets,
     },
   };
 }

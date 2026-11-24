@@ -21,7 +21,38 @@ type GameTargetLearnersPanelProps = {
   gameTargetStudentIds: string[];
   disabled?: boolean;
   onChangeGameTargets: (ids: string[]) => void;
+  /** Worksheet Step 4.2 uses the same picker with different copy. */
+  variant?: "game" | "worksheet";
 };
+
+const TARGET_COPY = {
+  game: {
+    panelZh: "遊戲對象",
+    panelEn: "Game targets",
+    hintZh: "從第二步名單中勾選本遊戲的對象（可少於全班）。",
+    hintEn: "Pick which Step 2 learners this game is for (can be a subset).",
+    emptyZh: "未勾選遊戲對象",
+    emptyEn: "No game targets selected",
+    selectFirstZh: "請先在「遊戲對象」勾選學習者。",
+    selectFirstEn: "Select learners under Game targets first.",
+    ariaSelect: "設為遊戲對象",
+    ariaDeselect: "取消遊戲對象",
+  },
+  worksheet: {
+    panelZh: "工作紙對象",
+    panelEn: "Worksheet targets",
+    hintZh:
+      "勾選需要個別調適工作紙的學習者；全班 UDL 版在 Step 3 有 UDL 時會出現獨立分頁。",
+    hintEn:
+      "Select learners for individualized worksheets; whole-class UDL uses a separate tab when Step 3 UDL is ready.",
+    emptyZh: "未勾選工作紙對象",
+    emptyEn: "No worksheet targets selected",
+    selectFirstZh: "請先在「工作紙對象」勾選學習者。",
+    selectFirstEn: "Select learners under Worksheet targets first.",
+    ariaSelect: "設為工作紙對象",
+    ariaDeselect: "取消工作紙對象",
+  },
+} as const;
 
 function briefNames(students: StudentRecord[], max = 3) {
   if (students.length === 0) {
@@ -40,7 +71,9 @@ export default function GameTargetLearnersPanel({
   gameTargetStudentIds,
   disabled = false,
   onChangeGameTargets,
+  variant = "game",
 }: GameTargetLearnersPanelProps) {
+  const copy = TARGET_COPY[variant];
   const panelId = useId();
   const [expanded, setExpanded] = useState(true);
 
@@ -93,8 +126,8 @@ export default function GameTargetLearnersPanel({
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold tracking-wide text-teal-ink uppercase">
             <BilingualStack
-              zh="遊戲對象"
-              en="Game targets"
+              zh={copy.panelZh}
+              en={copy.panelEn}
               layout="inline"
               enClassName="text-teal-700/80"
             />
@@ -102,8 +135,8 @@ export default function GameTargetLearnersPanel({
           {expanded ? (
             <p className="mt-1 text-xs leading-5 text-zinc-500">
               <BilingualStack
-                zh="從第二步名單中勾選本遊戲的對象（可少於全班）。"
-                en="Pick which Step 2 learners this game is for (can be a subset)."
+                zh={copy.hintZh}
+                en={copy.hintEn}
                 layout="stack"
                 enClassName="text-zinc-400"
               />
@@ -118,8 +151,8 @@ export default function GameTargetLearnersPanel({
                 />
               ) : !hasTargets ? (
                 <BilingualStack
-                  zh="未勾選遊戲對象"
-                  en="No game targets selected"
+                  zh={copy.emptyZh}
+                  en={copy.emptyEn}
                   layout="inline"
                 />
               ) : (
@@ -210,6 +243,8 @@ export default function GameTargetLearnersPanel({
                   student={student}
                   selected={targetSet.has(student.id)}
                   disabled={disabled}
+                  selectAria={copy.ariaSelect}
+                  deselectAria={copy.ariaDeselect}
                   onToggle={() => toggleStudent(student.id)}
                 />
               ))}
@@ -238,11 +273,15 @@ function GameTargetPickRow({
   student,
   selected,
   disabled,
+  selectAria,
+  deselectAria,
   onToggle,
 }: {
   student: StudentRecord;
   selected: boolean;
   disabled: boolean;
+  selectAria: string;
+  deselectAria: string;
   onToggle: () => void;
 }) {
   const subtitle = studentListSubtitle(student);
@@ -267,7 +306,7 @@ function GameTargetPickRow({
               ? "border-teal-700 bg-teal-700 text-white"
               : "border-zinc-300 bg-white"
           }`}
-          aria-label={selected ? "取消遊戲對象" : "設為遊戲對象"}
+          aria-label={selected ? deselectAria : selectAria}
         >
           {selected ? "✓" : ""}
         </button>

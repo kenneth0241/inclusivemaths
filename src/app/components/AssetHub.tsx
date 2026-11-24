@@ -5,40 +5,7 @@ import { buildGameHtml, buildWorksheetMarkdown } from "@/lib/asset-generators";
 import { downloadText } from "@/lib/download-text";
 import { useWorkflowDraft } from "@/lib/use-workflow-draft";
 import { isLessonReady } from "@/lib/workflow-draft";
-
-function WorksheetPreview({ markdown }: { markdown: string }) {
-  return (
-    <div className="space-y-3">
-      {markdown.split("\n").map((line, index) => {
-        if (line.startsWith("# ")) {
-          return (
-            <h3 key={index} className="text-2xl font-semibold">
-              {line.slice(2)}
-            </h3>
-          );
-        }
-        if (line.startsWith("## ")) {
-          return (
-            <h4 key={index} className="pt-2 text-xl font-semibold">
-              {line.slice(3)}
-            </h4>
-          );
-        }
-        if (line.trim() === "---") {
-          return <hr key={index} className="border-zinc-200" />;
-        }
-        if (!line.trim()) {
-          return <div key={index} className="h-2" />;
-        }
-        return (
-          <p key={index} className="whitespace-pre-wrap">
-            {line.replaceAll("**", "")}
-          </p>
-        );
-      })}
-    </div>
-  );
-}
+import WorksheetPreview from "./WorksheetPreview";
 
 export default function AssetHub() {
   const { draft, setDraft, hydrated } = useWorkflowDraft();

@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -29,13 +30,18 @@ const WorkflowDraftContext = createContext<WorkflowDraftContextValue | null>(
 );
 
 export function WorkflowDraftProvider({ children }: { children: ReactNode }) {
-  const [draft, setDraftState] = useState<WorkflowDraft>(DEFAULT_WORKFLOW_DRAFT);
+  // Same initial state on server and client — load sessionStorage only after mount.
+  const [draft, setDraftState] = useState(DEFAULT_WORKFLOW_DRAFT);
   const [hydrated, setHydrated] = useState(false);
+  const hydratedRef = useRef(hydrated);
+  hydratedRef.current = hydrated;
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate session draft after mount
-    setDraftState(loadWorkflowDraft());
+    // Re-read after mount (e.g. another tab) without ever starting from empty on client.
+    const loaded = loadWorkflowDraft();
+    setDraftState(loaded);
     setHydrated(true);
+    hydratedRef.current = true;
   }, []);
 
   const setDraft = useCallback(
@@ -43,7 +49,9 @@ export function WorkflowDraftProvider({ children }: { children: ReactNode }) {
       setDraftState((current) => {
         const next =
           typeof updater === "function" ? updater(current) : updater;
-        saveWorkflowDraft(next);
+        if (hydratedRef.current) {
+          saveWorkflowDraft(next);
+        }
         return next;
       });
     },

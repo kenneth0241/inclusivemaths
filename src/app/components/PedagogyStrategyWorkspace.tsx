@@ -45,6 +45,7 @@ type PedagogyStrategyWorkspaceProps = {
   baselineAnalyzing?: boolean;
   baselineError: string;
   refineBusy: boolean;
+  onRetryBaseline?: () => void;
   onRefineUdl: () => void;
   onRefineStudent: (index: number) => void;
 };
@@ -57,9 +58,14 @@ export default function PedagogyStrategyWorkspace({
   baselineAnalyzing = false,
   baselineError,
   refineBusy,
+  onRetryBaseline,
   onRefineUdl,
   onRefineStudent,
 }: PedagogyStrategyWorkspaceProps) {
+  const showStructuredOutputHint =
+    baselineError.includes("part_1_udl") ||
+    baselineError.includes("part_2_individualized") ||
+    baselineError.includes("Structured output validation failed");
   const [resultDialog, setResultDialog] =
     useState<PedagogyStrategyResultPanel | null>(null);
   const [individualRow, setIndividualRow] =
@@ -112,7 +118,38 @@ export default function PedagogyStrategyWorkspace({
               enClassName="text-sky-900/85"
             />
           ) : baselineError ? (
-            <p>{baselineError}</p>
+            <div className="space-y-3">
+              <p>{baselineError}</p>
+              {showStructuredOutputHint ? (
+                <div className="rounded-xl bg-red-100/80 px-3 py-2 text-xs leading-5 text-red-950">
+                  <p className="font-medium">
+                    <BilingualStack
+                      zh="Dify 結構化輸出未通過"
+                      en="Dify structured output failed"
+                      layout="inline"
+                    />
+                  </p>
+                  <p className="mt-1">
+                    <BilingualStack
+                      layout="stack"
+                      zh="請在 Pedagogical Strategy workflow 的基線 LLM 節點：1) 結構化輸出貼上 docs/pedagogy-structured-output.schema.json；2) 系統提示要求根物件含 part_1_udl 與 part_2_individualized（可為 []）；3) 勿輸出 markdown 圍欄。詳見 docs/dify-pedagogy-workflow.md。"
+                      en="In the baseline LLM: paste docs/pedagogy-structured-output.schema.json, require root keys part_1_udl and part_2_individualized (array, may be []), no markdown fences. See docs/dify-pedagogy-workflow.md."
+                      enClassName="text-red-900/85"
+                    />
+                  </p>
+                </div>
+              ) : null}
+              {onRetryBaseline ? (
+                <button
+                  type="button"
+                  disabled={baselineLoading || refineBusy}
+                  onClick={() => onRetryBaseline()}
+                  className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-red-900 ring-1 ring-red-200 hover:bg-red-50 disabled:opacity-50"
+                >
+                  <BilingualStack zh="重試分析" en="Retry analysis" layout="inline" />
+                </button>
+              ) : null}
+            </div>
           ) : ready ? (
             <BilingualStack
               layout="stack"

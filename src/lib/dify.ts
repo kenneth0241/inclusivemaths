@@ -447,6 +447,60 @@ export function isGameUdlChatConfigured() {
   }
 }
 
+/** Step 4.2 — SEN worksheet chatflow (POST /chat-messages). */
+export function getWorksheetChatConfig() {
+  const apiKey = process.env.DIFY_APP_WORKSHEET_API_KEY?.trim();
+  const apiBase = normalizeDifyApiBase(
+    process.env.DIFY_APP_WORKSHEET_API_BASE?.trim() ||
+      process.env.DIFY_APP_GAME_API_BASE?.trim() ||
+      process.env.DIFY_APP_PEDAGOGY_CHAT_API_BASE?.trim() ||
+      pedagogyApiBase(),
+  );
+  if (!apiKey || apiKey.includes("xxxxxxxx")) {
+    throw new Error("DIFY_APP_WORKSHEET_API_KEY is not set");
+  }
+  return { apiKey, apiBase };
+}
+
+export function isWorksheetChatConfigured() {
+  try {
+    getWorksheetChatConfig();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Step 4.2 — UDL / whole-class worksheet chatflow (separate Dify app). */
+export function getWorksheetUdlChatConfig() {
+  const apiKey =
+    process.env.DIFY_APP_WORKSHEET_UDL_API_KEY?.trim() ||
+    process.env.DIFY_APP_WORKSHEET_UDI_API_KEY?.trim();
+  const apiBase = normalizeDifyApiBase(
+    process.env.DIFY_APP_WORKSHEET_UDL_API_BASE?.trim() ||
+      process.env.DIFY_APP_WORKSHEET_UDI_API_BASE?.trim() ||
+      process.env.DIFY_APP_WORKSHEET_API_BASE?.trim() ||
+      process.env.DIFY_APP_GAME_API_BASE?.trim() ||
+      process.env.DIFY_APP_PEDAGOGY_CHAT_API_BASE?.trim() ||
+      pedagogyApiBase(),
+  );
+  if (!apiKey || apiKey.includes("xxxxxxxx")) {
+    throw new Error(
+      "DIFY_APP_WORKSHEET_UDL_API_KEY is not set (alias: DIFY_APP_WORKSHEET_UDI_API_KEY)",
+    );
+  }
+  return { apiKey, apiBase };
+}
+
+export function isWorksheetUdlChatConfigured() {
+  try {
+    getWorksheetUdlChatConfig();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function difyFetch(path: string, init?: RequestInit) {
   const { apiKey, apiBase } = getDifyConfig();
   const response = await fetch(`${apiBase}${path}`, {

@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
     ];
   },
   experimental: {
+    agentUpgrade: "security",
     proxyClientMaxBodySize: "50mb",
   },
   turbopack: {

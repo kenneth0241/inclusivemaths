@@ -1,0 +1,121 @@
+{
+  "type": "object",
+  "properties": {
+    "student_name": { "type": "string" },
+    "worksheet_title": { "type": "string" },
+    "topic_summary": { "type": "string" },
+    "applied_modes": { "type": "string" },
+    "response_format": { "type": "string" },
+    "header_image_prompt": { "type": "string" },
+    "docx_layout": {
+      "type": "object",
+      "properties": {
+        "font_size_pt": { "type": "number" },
+        "enlarge_operators": { "type": "boolean" },
+        "include_worked_example": { "type": "boolean" }
+      },
+      "required": [
+        "font_size_pt",
+        "enlarge_operators",
+        "include_worked_example"
+      ],
+      "additionalProperties": false
+    },
+    "status": {
+      "type": "string",
+      "enum": ["verified", "provisional", "needs_review"]
+    },
+    "teacher_note": { "type": "string" },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "number": { "type": "number" },
+          "page_break_before": { "type": "boolean" },
+          "objective": { "type": "string" },
+          "student_text": { "type": "string" },
+          "highlight_keywords": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "step_breakdown": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "ten_frame_data": {
+            "type": "object",
+            "properties": {
+              "group_a": { "type": "number" },
+              "group_b": { "type": "number" }
+            },
+            "required": ["group_a", "group_b"],
+            "additionalProperties": false
+          },
+          "visual_asset": { "type": "string" },
+          "svg_code": { "type": "string" },
+          "options": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "teacher_review": {
+            "type": "object",
+            "properties": {
+              "answer": { "type": "string" },
+              "unit": { "type": "string" },
+              "marking_criterion": { "type": "string" },
+              "applied_adaptation": { "type": "string" },
+              "words_needing_support": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "word": { "type": "string" },
+                    "reason": { "type": "string" }
+                  },
+                  "required": ["word", "reason"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "answer",
+              "unit",
+              "marking_criterion",
+              "applied_adaptation",
+              "words_needing_support"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "number",
+          "page_break_before",
+          "objective",
+          "student_text",
+          "highlight_keywords",
+          "step_breakdown",
+          "ten_frame_data",
+          "visual_asset",
+          "svg_code",
+          "options",
+          "teacher_review"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "student_name",
+    "worksheet_title",
+    "topic_summary",
+    "applied_modes",
+    "response_format",
+    "header_image_prompt",
+    "docx_layout",
+    "status",
+    "teacher_note",
+    "items"
+  ],
+  "additionalProperties": false
+}

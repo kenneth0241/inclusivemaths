@@ -43,7 +43,7 @@ const STEPS: {
     en: "Pedagogical strategy",
     zh: "教學策略",
   },
-  { id: 4, href: "/design/assets", en: "Assets", zh: "教材" },
+  { id: 4, href: "/design/assets/games", en: "Materials", zh: "教材" },
 ];
 
 type WorkflowShellProps = {

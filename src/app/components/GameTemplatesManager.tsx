@@ -173,7 +173,7 @@ export function GameTemplatesManager() {
               <BilingualStack zh="新增模板" en="Add template" layout="inline" />
             </button>
             <Link
-              href="/design/assets"
+              href="/design/assets/games"
               className="rounded-2xl bg-white px-4 py-2 text-sm font-medium text-zinc-800 ring-1 ring-zinc-200 hover:bg-zinc-50"
             >
               <BilingualStack zh="前往 Step 4" en="Open Step 4" layout="inline" />

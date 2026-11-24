@@ -342,6 +342,11 @@ export default function PedagogicalStrategyStudio() {
             baselineAnalyzing={baselineAnalyzing}
             baselineError={baselineError}
             refineBusy={refineBusy}
+            onRetryBaseline={() => {
+              baselineRunFp.current = null;
+              setBaselineError("");
+              void runBaseline();
+            }}
             onRefineUdl={() => setRefineTarget({ scope: "udl" })}
             onRefineStudent={(index) => {
               const row = draft.pedagogy.individualized[index];

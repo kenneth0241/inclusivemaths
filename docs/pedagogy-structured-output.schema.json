@@ -1,0 +1,65 @@
+{
+  "type": "object",
+  "properties": {
+    "part_1_udl": {
+      "type": "object",
+      "description": "Class-wide UDL — education theory and learning strategies (bilingual).",
+      "properties": {
+        "educational_theory_zh": { "type": "string" },
+        "educational_theory_en": { "type": "string" },
+        "learning_strategies_zh": { "type": "string" },
+        "learning_strategies_en": { "type": "string" }
+      },
+      "required": [
+        "educational_theory_zh",
+        "educational_theory_en",
+        "learning_strategies_zh",
+        "learning_strategies_en"
+      ],
+      "additionalProperties": false
+    },
+    "part_2_individualized": {
+      "type": "array",
+      "description": "Per-student adjustments; use [] when none.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "student_profile": { "type": "string" },
+          "educational_theory_zh": { "type": "string" },
+          "educational_theory_en": { "type": "string" },
+          "learning_strategies_zh": { "type": "string" },
+          "learning_strategies_en": { "type": "string" },
+          "applied_modes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "enum": ["Simplify Mode", "Chunking", "Visual Mode"]
+                },
+                "intensity_level": {
+                  "type": "string",
+                  "enum": ["High", "Medium", "Low"]
+                }
+              },
+              "required": ["mode", "intensity_level"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "student_profile",
+          "educational_theory_zh",
+          "educational_theory_en",
+          "learning_strategies_zh",
+          "learning_strategies_en",
+          "applied_modes"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["part_1_udl", "part_2_individualized"],
+  "additionalProperties": false
+}

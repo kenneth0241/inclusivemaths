@@ -2,7 +2,7 @@ export function sortStudentIds(ids: string[]): string[] {
   return [...ids].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 }
 
-/** Step 4 game audience — subset of `learner.studentIds`. Empty array is allowed. */
+/** Step 4 audience — subset of `learner.studentIds`. Empty array is allowed. */
 export function normalizeGameTargetStudentIds(
   raw: unknown,
   learnerStudentIds: string[],
@@ -15,6 +15,8 @@ export function normalizeGameTargetStudentIds(
     raw.filter((id): id is string => typeof id === "string" && allowed.has(id)),
   );
 }
+
+export const normalizeWorksheetTargetStudentIds = normalizeGameTargetStudentIds;
 
 export function gameTargetIdsEqual(a: string[], b: string[]): boolean {
   if (a.length !== b.length) {

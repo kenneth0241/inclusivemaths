@@ -28,10 +28,10 @@ const STEPS = [
     body: "Review locked context, develop strategy, then generate an editable lesson plan.",
   },
   {
-    href: "/design/assets",
-    title: "4. Worksheets & games",
+    href: "/design/assets/games",
+    title: "4. Materials",
     zh: "教材",
-    body: "Preview a SpLD-friendly worksheet and an HTML5 practice game.",
+    body: "Step 4.1 HTML games and Step 4.2 SpLD-friendly worksheets.",
   },
 ];
 

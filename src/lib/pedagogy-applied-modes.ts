@@ -131,6 +131,23 @@ export function formatAppliedModesList(
   return entries.map(formatAppliedModeSummary).join(", ");
 }
 
+/** Compact object for worksheet Dify (`simplify` / `chunking` / `visual` ratings). */
+export function formatAppliedModesWorksheetObject(
+  entries: PedagogyAppliedModeEntry[],
+): Record<string, PedagogyIntensityLevel> {
+  const out: Record<string, PedagogyIntensityLevel> = {};
+  for (const entry of entries) {
+    if (entry.mode === "Simplify Mode") {
+      out.simplify = entry.intensityLevel;
+    } else if (entry.mode === "Chunking") {
+      out.chunking = entry.intensityLevel;
+    } else if (entry.mode === "Visual Mode") {
+      out.visual = entry.intensityLevel;
+    }
+  }
+  return out;
+}
+
 export function formatAppliedModesMarkdown(
   entries: PedagogyAppliedModeEntry[],
 ): string {
